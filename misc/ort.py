@@ -216,8 +216,9 @@ examples:
             f'cmake --install Release --config Release --prefix {self.install_dir}', show_cmd=True, show_duration=True
         )
         Util.chdir(f"{self.install_dir}", verbose=True)
-        Util.execute("cp bin/* lib/", show_cmd=True, show_duration=True)
-        Util.execute("cp -r include/onnxruntime/* include/", show_cmd=True, show_duration=True)
+
+        Util.copy_files('bin', 'lib')
+        Util.copy_files('include/onnxruntime', 'include')
 
     def lint(self):
         Util.chdir(f"{self.root_dir}/js", verbose=True)
