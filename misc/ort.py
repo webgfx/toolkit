@@ -72,8 +72,15 @@ class Ort(Program):
 
         parser.add_argument("--build-wgpu", dest="build_wgpu", help="build wgpu", action="store_true")
         parser.add_argument("--build-cuda", dest="build_cuda", help="build cuda", action="store_true")
-        parser.add_argument("--cuda-home", dest="cuda_home", help="cuda home", default="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6")
-        parser.add_argument("--cudnn-home", dest="cudnn_home", help="cudnn home", default="C:/Program Files/NVIDIA/CUDNN/v9.0")
+        parser.add_argument(
+            "--cuda-home",
+            dest="cuda_home",
+            help="cuda home",
+            default="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v12.6",
+        )
+        parser.add_argument(
+            "--cudnn-home", dest="cudnn_home", help="cudnn home", default="C:/Program Files/NVIDIA/CUDNN/v9.0"
+        )
 
         parser.add_argument("--build-genai", dest="build_genai", help="build genai", action="store_true")
 
@@ -207,7 +214,7 @@ examples:
             self.build_type = 'Release'
 
         if not self.args.build_small:
-            cmd = f'{self.build_cmd} --config {self.build_type} --parallel --skip_tests --skip_submodule_sync --use_webgpu --build_nodejs --build_shared_lib  --enable_pybind --build_wheel --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF --cmake_generator "Visual Studio 17 2022"'
+            cmd = f'{self.build_cmd} --config {self.build_type} --parallel --skip_tests --skip_submodule_sync --use_webgpu --build_nodejs --build_shared_lib  --enable_pybind --build_wheel --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=ON --cmake_generator "Visual Studio 17 2022"'
             Util.execute(cmd, show_cmd=True, show_duration=True)
             Util.info(f"{timer.stop()} was spent to build")
 
