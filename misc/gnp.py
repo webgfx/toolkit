@@ -96,6 +96,7 @@ class Gnp(Program):
         parser.add_argument('--sync-src-only', dest='sync_src_only', help='sync src only', action='store_true')
         parser.add_argument('--runhooks', dest='runhooks', help='runhooks', action='store_true')
         parser.add_argument('--makefile', dest='makefile', help='generate makefile', action='store_true')
+        parser.add_argument('--remote', dest='remote', help='use distributed build system', action='store_true')
         parser.add_argument('--makefile-vs', dest='makefile_vs', help='generate visual studio sln', action='store_true')
         parser.add_argument('--build', dest='build', help='build', action='store_true')
         parser.add_argument(
@@ -153,6 +154,8 @@ examples:
             project = 'chromium'
         elif 'chrome' in project:
             project = 'chromium'
+        elif 'cr' in project:
+            project = 'chromium'
 
         self.project = project
 
@@ -166,6 +169,7 @@ examples:
             build_type = 'debug'
         else:
             build_type = 'release'
+        self.build_type = build_type
         self.build_type_cap = build_type.capitalize()
 
         if args.symbol_level == -1:
@@ -276,6 +280,12 @@ examples:
     def makefile(self):
         args = self.args
 
+        if self.args.remote:
+            cmd = f'autogn x64 {self.build_type} --use-remoteexec -o {self.build_type_cap}'
+            self._execute(cmd, exit_on_error=self.exit_on_error)
+            return
+
+        # non remote
         if args.is_debug:
             gn_args = 'is_debug=true'
         else:
@@ -359,12 +369,10 @@ examples:
             self._execute('%s lastchange.py -o LASTCHANGE' % Util.PYTHON, exit_on_error=self.exit_on_error)
             Util.chdir(self.root_dir)
 
-        cmd = 'ninja -k%s -j%s -C %s %s' % (
-            str(self.args.build_max_fail),
-            str(Util.CPU_COUNT),
-            self.out_dir,
-            ' '.join(targets),
-        )
+        if self.args.remote:
+            cmd = f'autoninja -C out/{self.build_type_cap} chrome'
+        else:
+            cmd = f'ninja -j{Util.CPU_COUNT} -k{self.args.build_max_fail} -C {self.out_dir} {" ".join(targets)}'
         if self.args.build_verbose:
             cmd += ' -v'
         self._execute(cmd, show_duration=True)
@@ -455,12 +463,12 @@ examples:
             if Util.HOST_OS == Util.WINDOWS:
                 src_files += [
                     'infra/config/generated/builders/try/dawn-win10-x64-deps-rel/targets/chromium.dawn.json',
-                    'infra/config/generated/builders/try/gpu-fyi-try-win10-intel-rel-64/targets/chromium.gpu.fyi.json'
+                    'infra/config/generated/builders/try/gpu-fyi-try-win10-intel-rel-64/targets/chromium.gpu.fyi.json',
                 ]
             elif Util.HOST_OS == Util.LINUX:
                 src_files += [
                     'infra/config/generated/builders/try/dawn-linux-x64-deps-rel/targets/chromium.dawn.json',
-                    'infra/config/generated/builders/try/gpu-fyi-try-linux-intel-rel/targets/chromium.gpu.fyi.json'
+                    'infra/config/generated/builders/try/gpu-fyi-try-linux-intel-rel/targets/chromium.gpu.fyi.json',
                 ]
 
         src_file_count = len(src_files)
