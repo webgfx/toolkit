@@ -70,7 +70,7 @@ class Ort(Program):
             action="store_true",
         )
 
-        parser.add_argument("--build-wgpu", dest="build_wgpu", help="build wgpu", action="store_true")
+        parser.add_argument("--build-native", dest="build_native", help="build native", action="store_true")
         parser.add_argument("--build-cuda", dest="build_cuda", help="build cuda", action="store_true")
         parser.add_argument(
             "--cuda-home",
@@ -161,7 +161,7 @@ examples:
             self.build_type = 'MinSizeRel'
         if not self.args.build_skip_wasm and not self.args.build_small:
             # --enable_wasm_debug_info may cause unit test crash
-            cmd = f"{self.build_cmd} --config {self.build_type} --build_wasm --enable_wasm_simd --enable_wasm_threads --parallel --skip_tests --skip_submodule_sync --use_jsep --use_webnn --target onnxruntime_webassembly"
+            cmd = f"{self.build_cmd} --config {self.build_type} --build_wasm --enable_wasm_simd --enable_wasm_threads --parallel --skip_tests --skip_submodule_sync --use_jsep --target onnxruntime_webassembly"
             if self.args.build_type == "Debug":
                 cmd += " --enable_wasm_debug_info"
             else:
@@ -208,13 +208,13 @@ examples:
 
         Util.info(f"{timer.stop()} was spent to build")
 
-    def build_wgpu(self):
+    def build_native(self):
         timer = Timer()
         if self.build_type == 'default':
             self.build_type = 'Release'
 
         if not self.args.build_small:
-            cmd = f'{self.build_cmd} --config {self.build_type} --parallel --skip_tests --skip_submodule_sync --use_webgpu --build_nodejs --build_shared_lib  --enable_pybind --build_wheel --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=ON --cmake_generator "Visual Studio 17 2022"'
+            cmd = f'{self.build_cmd} --config {self.build_type} --parallel --skip_tests --skip_submodule_sync --use_webgpu --use_dml --build_nodejs --build_shared_lib  --enable_pybind --build_wheel --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=ON --cmake_generator "Visual Studio 17 2022"'
             Util.execute(cmd, show_cmd=True, show_duration=True)
             Util.info(f"{timer.stop()} was spent to build")
 
@@ -241,8 +241,8 @@ examples:
             self.build_genai()
         if args.build_web:
             self.build_web()
-        if args.build_wgpu:
-            self.build_wgpu()
+        if args.build_native:
+            self.build_native()
         if args.lint:
             self.lint()
         if args.split_model:
