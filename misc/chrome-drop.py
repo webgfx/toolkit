@@ -206,7 +206,7 @@ examples:
 
             if 'dawn' in self.targets:
                 cmds.append(
-                    f'{Util.PYTHON} {Util.GNP_SCRIPT} --makefile --build --build-target dawn_e2e --root-dir {self.dawn_dir}'
+                    f'{Util.PYTHON} {Util.GNP_SCRIPT} --makefile --build --disable-component-build --build-target dawn_e2e --root-dir {self.dawn_dir}'
                 )
 
             if (
@@ -546,7 +546,7 @@ examples:
         Util.append_file(report_file, summary)
         Util.append_file(report_file, details)
 
-        if not self.args.email:
+        if self.args.email:
             subject = f'[Chrome Drop] {Util.HOST_NAME} {self.timestamp}'
             content = summary + '\n' + details + '\n'
             if os.path.exists(self.exec_log):
