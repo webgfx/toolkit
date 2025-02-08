@@ -225,9 +225,10 @@ examples:
                 )
 
             if 'dawn' in self.targets:
-                cmds.append(
-                    f'{Util.PYTHON} {Util.GNP_SCRIPT} --backup --backup-target dawn_e2e --root-dir {self.dawn_dir}'
-                )
+                cmd = f'{Util.PYTHON} {Util.GNP_SCRIPT} --backup --backup-target dawn_e2e --root-dir {self.dawn_dir}'
+                if self.args.backup_inplace:
+                    cmd += ' --backup-inplace'
+                cmds.append(cmd)
 
             if ('webgl' in self.targets or 'webgpu' in self.targets) and not self.args.backup_skip_chrome:
                 cmd = f'{Util.PYTHON} {Util.GNP_SCRIPT} --backup --backup-target {chrome_target} --root-dir {self.chrome_dir}'

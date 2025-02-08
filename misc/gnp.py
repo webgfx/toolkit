@@ -333,11 +333,17 @@ examples:
                     ' dawn_enable_d3d12=false dawn_enable_metal=false dawn_enable_null=false dawn_enable_opengles=false'
                 )
 
-        if self.args.target_os == 'android':
+        if self.args.target_os == Util.ANDROID:
             if Util.HOST_OS == Util.WINDOWS:
                 gn_args += ' target_os=\\\"android\\\" target_cpu=\\\"x64\\\"'
             else:
                 gn_args += ' target_os="android" target_cpu="x64"'
+
+        if self.project == 'dawn' and self.args.target_os == Util.WINDOWS:
+            gn_args += ' dawn_dxc_enable_asserts_in_ndebug=false dawn_enable_desktop_gl=false dawn_enable_opengles=false dawn_use_x11=false dawn_enable_vulkan=false dawn_use_swiftshader=false'
+            gn_args += ' tint_build_glsl_writer=false tint_build_glsl_validator=false tint_build_ir_binary=false tint_build_spv_reader=false'
+            # Below gn args couldn't be set
+            # gn_args += ' dawn_supports_glfw_for_windowing=false dawn_use_glfw=false dawn_use_windows_ui=false tint_build_cmd_tools=false tint_build_tests=false'
 
         quotation = Util.get_quotation()
         cmd = 'gn --args=%s%s%s' % (quotation, gn_args, quotation)
@@ -433,6 +439,10 @@ examples:
 
         # 'gen/', 'obj/', '../../testing/test_env.py', '../../testing/location_tags.json', '../../.vpython'
         exclude_files = []
+        if self.args.backup_target == 'dawn_e2e':
+            # Even if we don't build them, they still show up from gn desc. So we need to remove them manually.
+            exclude_files.extend(['../..', 'bin/', 'vk', 'vulkan', 'Vk', 'dbg', 'libEGL', 'libGLESv2', 'd3dcompiler_47'])
+
         src_files = []
         for tmp_file in tmp_files:
             tmp_file = tmp_file.rstrip('\r')
