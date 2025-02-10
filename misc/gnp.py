@@ -498,6 +498,11 @@ examples:
             # permission denied
             # shutil.copyfile(file, dst_dir)
 
+        if self.args.backup_target == 'dawn_e2e':
+            Util.chdir(backup_path)
+            Util.copy_files(f'out/{self.build_type_cap}', '.')
+            shutil.rmtree('out')
+
     def upload(self):
         if self.rev:
             rev = self.rev
@@ -534,7 +539,10 @@ examples:
             run_dir = self.out_dir
         else:
             rev_name, _ = Util.get_backup_dir('backup', self.args.run_rev)
-            run_dir = 'backup/%s/out/%s' % (rev_name, self.build_type_cap)
+            if self.args.run_target == 'dawn_e2e':
+                run_dir = f'backup/{rev_name}'
+            else:
+                run_dir = f'backup/{rev_name}/out/{self.build_type_cap}'
 
         Util.chdir(run_dir, verbose=True)
         run_target = self.args.run_target
