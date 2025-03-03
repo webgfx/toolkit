@@ -214,8 +214,8 @@ examples:
             self.build_type = 'Release'
 
         if not self.args.build_small:
-            cmd = f'{self.build_cmd} --config {self.build_type} --parallel --skip_tests --skip_submodule_sync --use_webgpu --build_nodejs --build_shared_lib --cmake_generator "Visual Studio 17 2022"'
-            #cmd += " --use_dml --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=ON --enable_pybind --build_wheel"
+            cmd = f'{self.build_cmd} --config {self.build_type} --parallel --skip_tests --use_webgpu --build_nodejs --build_shared_lib --cmake_generator "Visual Studio 17 2022"'
+            #cmd += " --use_dml --cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=ON --enable_pybind --build_wheel --skip_submodule_sync"
             Util.execute(cmd, show_cmd=True, show_duration=True)
             Util.info(f"{timer.stop()} was spent to build")
 
