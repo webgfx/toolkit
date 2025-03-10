@@ -221,7 +221,7 @@ examples:
 
         Util.chdir(f"{self.root_dir}/{self.build_dir}", verbose=True)
         Util.execute(
-            f'cmake --install Release --config Release --prefix {self.install_dir}', show_cmd=True, show_duration=True
+            f'cmake --install {self.build_type} --config {self.build_type} --prefix {self.install_dir}-{self.build_type}', show_cmd=True, show_duration=True
         )
         Util.chdir(f"{self.install_dir}", verbose=True)
 
