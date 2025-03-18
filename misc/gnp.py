@@ -339,6 +339,12 @@ examples:
             else:
                 gn_args += ' target_os="android" target_cpu="x64"'
 
+        if Util.HOST_OS == Util.WINDOWS:
+            if self.target_arch == Util.ARM64:
+                gn_args += ' target_cpu=\\\"arm64\\\"'
+            elif self.target_arch == Util.AMD64:
+                gn_args += ' target_cpu=\\\"x64\\\"'
+
         if self.project == 'dawn' and self.args.target_os == Util.WINDOWS:
             gn_args += ' dawn_dxc_enable_asserts_in_ndebug=false dawn_enable_desktop_gl=false dawn_enable_opengles=false dawn_use_x11=false dawn_enable_vulkan=false dawn_use_swiftshader=false'
             gn_args += ' tint_build_glsl_writer=false tint_build_glsl_validator=false tint_build_ir_binary=false tint_build_spv_reader=false'
