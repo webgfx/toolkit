@@ -212,7 +212,7 @@ examples:
         for project in self.projects:
             timer = Timer()
             root_dir = self.PROJECT_INFO[project][self.PROJECT_INFO_INDEX_ROOT_DIR]
-            cmd = '%s %s --root-dir %s --sync --sync-reset --runhooks' % (Util.PYTHON, Util.GNP_SCRIPT, root_dir)
+            cmd = '%s %s --root-dir %s --sync --sync-reset --runhooks' % (Util.PYTHON, self.GNP_SCRIPT, root_dir)
             if self.args.proxy:
                 cmd += ' --proxy %s' % (self.args.proxy)
             dryrun = self.args.dryrun
@@ -269,11 +269,11 @@ examples:
             root_dir = self.PROJECT_INFO[project][self.PROJECT_INFO_INDEX_ROOT_DIR]
 
             if op == 'build':
-                cmd = '%s %s --root-dir %s --disable-component-build --makefile --build --build-target %s' % (Util.PYTHON, Util.GNP_SCRIPT, root_dir, ','.join(project_targets[project]))
+                cmd = '%s %s --root-dir %s --disable-component-build --makefile --build --build-target %s' % (Util.PYTHON, self.GNP_SCRIPT, root_dir, ','.join(project_targets[project]))
             elif op == 'backup':
-                cmd = '%s %s --root-dir %s --backup --backup-target %s' % (Util.PYTHON, Util.GNP_SCRIPT, root_dir, ','.join(project_targets[project]))
+                cmd = '%s %s --root-dir %s --backup --backup-target %s' % (Util.PYTHON, self.GNP_SCRIPT, root_dir, ','.join(project_targets[project]))
             elif op == 'upload':
-                cmd = '%s %s --root-dir %s --upload' % (Util.PYTHON, Util.GNP_SCRIPT, root_dir)
+                cmd = '%s %s --root-dir %s --upload' % (Util.PYTHON, self.GNP_SCRIPT, root_dir)
 
             if self._execute(cmd, exit_on_error=False, dryrun=self.args.dryrun)[0]:
                 error_info = 'Project %s %s failed' % (project, op)
@@ -363,7 +363,7 @@ examples:
 
             real_name = self.os_targets[target_index][self.TARGET_INDEX_REAL_NAME]
             real_type = self.os_targets[target_index][self.TARGET_INDEX_REAL_TYPE]
-            config_cmd = '%s %s --run --root-dir %s --run-target %s --run-rev out' % (Util.PYTHON, Util.GNP_SCRIPT, project_run_root_dir, real_name)
+            config_cmd = '%s %s --run --root-dir %s --run-target %s --run-rev out' % (Util.PYTHON, self.GNP_SCRIPT, project_run_root_dir, real_name)
             if Util.HOST_OS == Util.LINUX:
                 config_cmd += ' --run-mesa-rev %s' % self.args.run_mesa_rev
             run_args = self.os_targets[target_index][self.TARGET_INDEX_RUN_ARGS]

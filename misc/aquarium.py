@@ -131,7 +131,7 @@ examples:
         Util.execute('dos2unix %s/DEPS' % self.root_dir)
 
     def sync(self):
-        cmd = '%s %s --root-dir %s --sync --runhooks' % (Util.PYTHON, Util.GNP_SCRIPT, self.root_dir)
+        cmd = '%s %s --root-dir %s --sync --runhooks' % (Util.PYTHON, self.GNP_SCRIPT, self.root_dir)
         Util.execute(cmd)
 
     def makefile(self):

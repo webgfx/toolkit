@@ -184,13 +184,13 @@ examples:
                 cmds.append(f'{Util.PYTHON} {ScriptRepo.ROOT_DIR}/mesa/mesa.py --sync --root-dir {self.mesa_dir}')
 
             if 'angle' in self.targets:
-                cmds.append(f'{Util.PYTHON} {Util.GNP_SCRIPT} --sync --runhooks --root-dir {self.angle_dir}')
+                cmds.append(f'{Util.PYTHON} {self.GNP_SCRIPT} --sync --runhooks --root-dir {self.angle_dir}')
 
             if 'dawn' in self.targets:
-                cmds.append(f'{Util.PYTHON} {Util.GNP_SCRIPT} --sync --runhooks --root-dir {self.dawn_dir}')
+                cmds.append(f'{Util.PYTHON} {self.GNP_SCRIPT} --sync --runhooks --root-dir {self.dawn_dir}')
 
             if 'webgl' in self.targets or 'webgpu' in self.targets:
-                cmd = f'{Util.PYTHON} {Util.GNP_SCRIPT} --sync --sync-reset --runhooks --root-dir {self.chrome_dir}'
+                cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --sync --sync-reset --runhooks --root-dir {self.chrome_dir}'
                 if self.args.build_chrome_rev != 'latest':
                     cmd += f' --rev {self.args.build_chrome_rev}'
                 cmds.append(cmd)
@@ -201,12 +201,12 @@ examples:
 
             if 'angle' in self.targets:
                 cmds.append(
-                    f'{Util.PYTHON} {Util.GNP_SCRIPT} --makefile --build --build-target angle_e2e --root-dir {self.angle_dir}'
+                    f'{Util.PYTHON} {self.GNP_SCRIPT} --makefile --build --build-target angle_e2e --root-dir {self.angle_dir}'
                 )
 
             if 'dawn' in self.targets:
                 cmds.append(
-                    f'{Util.PYTHON} {Util.GNP_SCRIPT} --makefile --build --disable-component-build --build-target dawn_e2e --root-dir {self.dawn_dir}'
+                    f'{Util.PYTHON} {self.GNP_SCRIPT} --makefile --build --disable-component-build --build-target dawn_e2e --root-dir {self.dawn_dir}'
                 )
 
             if (
@@ -215,23 +215,23 @@ examples:
                 and not self.args.build_skip_chrome
             ):
                 cmds.append(
-                    f'{Util.PYTHON} {Util.GNP_SCRIPT} --disable-component-build --makefile --symbol-level 0 --build --build-target {chrome_target} --root-dir {self.chrome_dir}'
+                    f'{Util.PYTHON} {self.GNP_SCRIPT} --disable-component-build --makefile --symbol-level 0 --build --build-target {chrome_target} --root-dir {self.chrome_dir}'
                 )
 
         elif op == 'backup':
             if 'angle' in self.targets:
                 cmds.append(
-                    f'{Util.PYTHON} {Util.GNP_SCRIPT} --backup --backup-target angle_e2e --root-dir {self.angle_dir}'
+                    f'{Util.PYTHON} {self.GNP_SCRIPT} --backup --backup-target angle_e2e --root-dir {self.angle_dir}'
                 )
 
             if 'dawn' in self.targets:
-                cmd = f'{Util.PYTHON} {Util.GNP_SCRIPT} --backup --backup-target dawn_e2e --root-dir {self.dawn_dir}'
+                cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --backup --backup-target dawn_e2e --root-dir {self.dawn_dir}'
                 if self.args.backup_inplace:
                     cmd += ' --backup-inplace'
                 cmds.append(cmd)
 
             if ('webgl' in self.targets or 'webgpu' in self.targets) and not self.args.backup_skip_chrome:
-                cmd = f'{Util.PYTHON} {Util.GNP_SCRIPT} --backup --backup-target {chrome_target} --root-dir {self.chrome_dir}'
+                cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --backup --backup-target {chrome_target} --root-dir {self.chrome_dir}'
                 if self.args.backup_inplace:
                     cmd += ' --backup-inplace'
                 if self.target_os == Util.CHROMEOS:
@@ -240,13 +240,13 @@ examples:
 
         elif op == 'upload':
             if 'angle' in self.targets:
-                cmds.append(f'{Util.PYTHON} {Util.GNP_SCRIPT} --upload --root-dir {self.angle_dir}')
+                cmds.append(f'{Util.PYTHON} {self.GNP_SCRIPT} --upload --root-dir {self.angle_dir}')
 
             if 'dawn' in self.targets:
-                cmds.append(f'{Util.PYTHON} {Util.GNP_SCRIPT} --upload --root-dir {self.dawn_dir}')
+                cmds.append(f'{Util.PYTHON} {self.GNP_SCRIPT} --upload --root-dir {self.dawn_dir}')
 
             if ('webgl' in self.targets or 'webgpu' in self.targets) and not self.args.backup_skip_chrome:
-                cmd = f'{Util.PYTHON} {Util.GNP_SCRIPT} --upload --root-dir {self.chrome_dir}'
+                cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --upload --root-dir {self.chrome_dir}'
                 if self.target_os == Util.CHROMEOS:
                     cmd += ' --target-os chromeos'
                 cmds.append(cmd)
@@ -275,7 +275,7 @@ examples:
             rev_name, _ = Util.get_backup_dir(f'{self.angle_dir}/backup', 'latest')
             # Locally update angle_end2end_tests_expectations.txt
             TestExpectation.update('angle_end2end_tests', f'{self.angle_dir}/backup/{rev_name}')
-            cmd = f'{Util.PYTHON} {Util.GNP_SCRIPT} --run --run-target angle_e2e --run-rev latest --root-dir {self.angle_dir} --disable-exit-on-error'
+            cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --run --run-target angle_e2e --run-rev latest --root-dir {self.angle_dir} --disable-exit-on-error'
             run_args = ''
             if self.args.dryrun:
                 run_args = '--gtest_filter=*EGLAndroidFrameBufferTargetTest*'
@@ -315,7 +315,7 @@ examples:
                     test_backends.append(all_backends[int(i)])
 
             for backend in test_backends:
-                cmd = f'{Util.PYTHON} {Util.GNP_SCRIPT} --run --run-target dawn_e2e --run-rev latest --root-dir {self.dawn_dir} --disable-exit-on-error'
+                cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --run --run-target dawn_e2e --run-rev latest --root-dir {self.dawn_dir} --disable-exit-on-error'
                 result_file = f'{self.result_dir}/dawn-{backend}.json'
                 run_args = f'--gtest_output=json:{result_file}'
                 if self.run_filter != 'all':
