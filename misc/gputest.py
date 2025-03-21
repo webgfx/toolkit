@@ -50,18 +50,7 @@ class GPUTest(Program):
         ]
     PROJECT_INFO = {
         'angle': ['%s/%s/angle' % (Util.PROJECT_DIR, GPUTEST_FOLDER), ['infra/specs/angle.json']],
-        #'aquarium': ['%s/%s/aquarium' % (Util.PROJECT_DIR, GPUTEST_FOLDER)],
         'chromium': ['%s/%s/chromium/src' % (Util.PROJECT_DIR, GPUTEST_FOLDER), CHROMIUM_CONFIG_FILES],
-    }
-    AQUARIUM_BASE = {
-        Util.WINDOWS: {
-            'd3d12': 33,
-            'dawn_d3d12': 38,
-            'dawn_vulkan': 38,
-        },
-        Util.LINUX: {
-            'dawn_vulkan': 38,
-        }
     }
 
     SKIP_CASES_INDEX_OS = 0
@@ -75,7 +64,6 @@ class GPUTest(Program):
     REAL_TYPE_INFO_INDEX_FILTER = 0
     REAL_TYPE_INFO_INDEX_EXTRA_ARGS = 1
     REAL_TYPE_INFO = {
-        'aquarium': ['--test-time', ''],
         'gtest_angle': ['--gtest_filter', ''], # --cfi-diag=0
         'gtest_chrome': ['--gtest_filter', ''], # --cfi-diag=0
         'telemetry_gpu_integration_test': ['--test-filter', '--retry-limit 1 --retry-only-retry-on-failure-tests'],
@@ -86,10 +74,6 @@ class GPUTest(Program):
     VIRTUAL_NAME_INFO_INDEX_DRYRUN = 1
     VIRTUAL_NAME_INFO_INDEX_EXTRA_ARGS = 2
     VIRTUAL_NAME_INFO = {
-        'aquarium_d3d12': ['aquarium', '1'],
-        'aquarium_dawn_d3d12': ['aquarium', '1'],
-        'aquarium_dawn_vulkan': ['aquarium', '1'],
-
         'angle_end2end_tests': ['gtest_angle', 'EGLAndroidFrameBufferTargetTest'],
         'angle_white_box_tests': ['gtest_angle', 'VulkanDescriptorSetTest.AtomicCounterReadLimitedDescriptorPool'],
 
@@ -780,27 +764,7 @@ examples:
 
         real_type = self.VIRTUAL_NAME_INFO[virtual_name][self.VIRTUAL_NAME_INFO_INDEX_REAL_TYPE]
 
-        if real_type == 'aquarium':
-            result = TestResult()
-            lines = open(result_file).readlines()
-            for line in lines:
-                match = re.match('Avg FPS: (.*)', line)
-                if match:
-                    run_fps = int(match.group(1))
-                    backend = virtual_name.replace('aquarium_', '')
-                    if self.args.dryrun:
-                        base_fps = 0
-                    else:
-                        base_fps = self.AQUARIUM_BASE[Util.HOST_OS][backend]
-
-                    if run_fps < base_fps:
-                        result.pass_fail.append('%s -> %s' % (base_fps, run_fps))
-                    else:
-                        result.pass_pass.append('%s -> %s' % (base_fps, run_fps))
-                    break
-            return result
-        else:
-            return TestResult(result_file, real_type)
+        return TestResult(result_file, real_type)
 
     def _send_email(self, subject, content=''):
         if self.args.email:

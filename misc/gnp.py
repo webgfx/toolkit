@@ -280,35 +280,30 @@ examples:
     def makefile(self):
         args = self.args
 
-        if self.args.remote:
-            cmd = f'autogn x64 {self.build_type} --use-remoteexec -o {self.build_type_cap}'
-            self._execute(cmd, exit_on_error=self.exit_on_error)
-            return
-
-        # non remote
         if args.is_debug:
             gn_args = 'is_debug=true'
         else:
             gn_args = 'is_debug=false'
 
-        if self.project != 'aquarium':
-            if args.dcheck:
-                gn_args += ' dcheck_always_on=true'
-            else:
-                gn_args += ' dcheck_always_on=false'
+        if args.dcheck:
+            gn_args += ' dcheck_always_on=true'
+        else:
+            gn_args += ' dcheck_always_on=false'
 
-            if self.args.disable_component_build:
-                gn_args += ' is_component_build=false'
-            else:
-                gn_args += ' is_component_build=true'
+        if self.args.disable_component_build:
+            gn_args += ' is_component_build=false'
+        else:
+            gn_args += ' is_component_build=true'
 
-            if args.disable_warning_as_error:
-                gn_args += ' treat_warnings_as_errors=false'
-            else:
-                gn_args += ' treat_warnings_as_errors=true'
+        if args.disable_warning_as_error:
+            gn_args += ' treat_warnings_as_errors=false'
+        else:
+            gn_args += ' treat_warnings_as_errors=true'
 
-            gn_args += ' symbol_level=%s' % self.args.symbol_level
-            gn_args += ' is_clang=true'
+        gn_args += ' symbol_level=%s' % self.args.symbol_level
+
+        if args.remote:
+            gn_args += ' use_remoteexec=true reclient_cfg_dir=\\\"//buildtools/reclient_cfgs\\\" use_siso=true'
 
         if self.project == 'chromium':
             if self.args.symbol_level == 0:
@@ -382,12 +377,17 @@ examples:
             Util.chdir(self.root_dir)
 
         if self.args.remote:
-            cmd = f'autoninja -C out/{self.build_type_cap} chrome'
+            Util.chdir(self.out_dir)
+            cmd = f'autoninja chrome'
         else:
             cmd = f'ninja -j{Util.CPU_COUNT} -k{self.args.build_max_fail} -C {self.out_dir} {" ".join(targets)}'
         if self.args.build_verbose:
             cmd += ' -v'
-        self._execute(cmd, show_duration=True)
+
+        if self.args.remote:
+            os.system(cmd)
+        else:
+            self._execute(cmd, show_duration=True)
 
     def backup(self):
         if self.project == 'chromium':
@@ -472,8 +472,6 @@ examples:
                 'out/%s/args.gn' % self.build_type_cap,
                 'out/%s/../../infra/specs/angle.json' % self.build_type_cap,
             ]
-        elif self.project == 'aquarium':
-            src_files += ['assets/', 'shaders/']
         elif self.project == 'chromium':
             src_files += ['out/%s/args.gn' % self.build_type_cap]
             if Util.HOST_OS == Util.WINDOWS:
