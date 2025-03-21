@@ -425,23 +425,17 @@ examples:
                     targets[index] = '//src/dawn/tests:%s' % target
 
         tmp_files = []
-        if self.project == 'aquarium':
-            for tmp_file in os.listdir(self.out_dir):
-                if os.path.isdir('%s/%s' % (self.out_dir, tmp_file)):
-                    tmp_file += '/'
-                tmp_files.append(tmp_file)
-        else:
-            for target in targets:
-                target_files = (
-                    self._execute(
-                        'gn desc %s %s runtime_deps' % (self.out_dir, target),
-                        exit_on_error=self.exit_on_error,
-                        return_out=True,
-                    )[1]
-                    .rstrip('\n')
-                    .split('\n')
-                )
-                tmp_files = Util.union_list(tmp_files, target_files)
+        for target in targets:
+            target_files = (
+                self._execute(
+                    'gn desc %s %s runtime_deps' % (self.out_dir, target),
+                    exit_on_error=self.exit_on_error,
+                    return_out=True,
+                )[1]
+                .rstrip('\n')
+                .split('\n')
+            )
+            tmp_files = Util.union_list(tmp_files, target_files)
 
         # 'gen/', 'obj/', '../../testing/test_env.py', '../../testing/location_tags.json', '../../.vpython'
         exclude_files = []

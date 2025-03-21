@@ -206,11 +206,6 @@ examples:
                 Util.error(error_info)
                 del_projects.append(project)
 
-            if project == 'aquarium' and self.args.sync_roll_dawn:
-                Util.chdir('%s/third_party/dawn' % root_dir)
-                self._execute('git checkout master && git pull', dryrun=dryrun)
-                Util.info('Roll Dawn in Aquarium to %s on %s' % (Util.get_working_dir_hash(), Util.get_working_dir_date()))
-
             self._log_exec(timer.stop(), 'Sync %s' % project, cmd)
 
         if del_projects:
@@ -427,7 +422,7 @@ examples:
 
             dryrun_cond = self.VIRTUAL_NAME_INFO[virtual_name][self.VIRTUAL_NAME_INFO_INDEX_DRYRUN]
             if args.dryrun and dryrun_cond:
-                if real_type not in ['aquarium', 'webgpu_blink_web_tests']:
+                if real_type not in ['webgpu_blink_web_tests']:
                     dryrun_cond = '*%s*' % dryrun_cond
                 config_args += ' %s=%s' % (self.REAL_TYPE_INFO[real_type][self.REAL_TYPE_INFO_INDEX_FILTER], dryrun_cond)
             else:
@@ -458,9 +453,7 @@ examples:
                 op += '-%s' % virtual_name
                 result_file = '%s/%s%s' % (self.result_dir, op, self.RESULT_FILE_SUFFIX)
 
-                if real_type in ['aquarium']:
-                    shard_args += ' > %s' % result_file
-                elif real_type in ['gtest_chrome', 'telemetry_gpu_integration_test']:
+                if real_type in ['gtest_chrome', 'telemetry_gpu_integration_test']:
                     shard_args += ' %s=%s' % (output_arg, result_file)
                     Util.ensure_file(result_file)
 
@@ -563,10 +556,7 @@ examples:
                 pass_fail_info = '%s<p>%s' % (len(result.pass_fail), '<p>'.join(result.pass_fail[:self.MAX_FAIL_IN_REPORT]))
                 fail_pass_info = '%s<p>%s' % (len(result.fail_pass), '<p>'.join(result.fail_pass[:self.MAX_FAIL_IN_REPORT]))
                 fail_fail_info = len(result.fail_fail)
-                if re.search('aquarium', op) and result.pass_pass:
-                    pass_pass_info = '%s<p>%s' % (len(result.pass_pass), '<p>'.join(result.pass_pass[:self.MAX_FAIL_IN_REPORT]))
-                else:
-                    pass_pass_info = len(result.pass_pass)
+                pass_pass_info = len(result.pass_pass)
 
                 if result.pass_fail:
                     color = 'red'
@@ -617,17 +607,6 @@ examples:
 
                 config_dir = '%s/%s/%s' % (Util.BACKUP_DIR, relative_path, rev_name)
 
-            if project == 'aquarium':
-                os_backends = {
-                    Util.WINDOWS: ['d3d12', 'dawn_d3d12', 'dawn_vulkan'],
-                    Util.LINUX: ['dawn_vulkan']
-                }
-                for os in os_backends:
-                    for backend in os_backends[os]:
-                        targets.append([os, 'aquarium', 'aquarium_%s' % backend, 'aquarium', 'aquarium', ['--test-time 30', '--num-fish 30000', '--enable-msaa', '--turn-off-vsync', '--integrated-gpu', '--window-size=1920,1080', '--print-log', '--backend %s' % backend], 1])
-                continue
-
-            # projects other than Aquarium
             config_files = self.PROJECT_INFO[project][self.PROJECT_INFO_INDEX_CONFIG_FILES]
             for config_file in config_files:
                 config_file = '%s/%s' % (config_dir, config_file)
