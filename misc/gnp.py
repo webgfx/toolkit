@@ -68,7 +68,7 @@ class Gnp(Program):
         )
         parser.add_argument('--vulkan-only', dest='vulkan_only', help='gn args with vulkan only', action='store_true')
 
-        parser.add_argument('--special-out-dir', dest='special_out_dir', help='special out dir', action='store_true')
+        parser.add_argument('--out-dir', dest='out_dir', help='out dir')
         parser.add_argument('--rev', dest='rev', help='revision')
         parser.add_argument('--rev-stride', dest='rev_stride', help='rev stride', type=int, default=1)
         parser.add_argument('--symbol-level', dest='symbol_level', help='symbol level', type=int, default=-1)
@@ -170,7 +170,6 @@ examples:
         else:
             build_type = 'release'
         self.build_type = build_type
-        self.build_type_cap = build_type.capitalize()
 
         if args.symbol_level == -1:
             if args.is_debug:
@@ -178,14 +177,13 @@ examples:
             else:
                 args.symbol_level = 0
 
-        if self.args.special_out_dir:
-            out_dir = Util.cal_relative_out_dir(
-                self.target_arch, self.target_os, args.symbol_level, args.disable_component_build, args.dcheck
-            )
+        if self.args.out_dir:
+            out_dir = self.args.out_dir
         else:
-            out_dir = 'out'
-        # capitalize() is required by WebGPU CTS
-        self.out_dir = '%s/%s' % (out_dir, self.build_type_cap)
+            # capitalize() is required by WebGPU CTS
+            out_dir = f'{self.build_type}_{self.target_cpu}'
+
+        self.out_dir = f'out/{out_dir}'
 
         if self.project == 'angle':
             default_target = 'angle_e2e'
@@ -335,10 +333,7 @@ examples:
                 gn_args += ' target_os="android" target_cpu="x64"'
 
         if Util.HOST_OS == Util.WINDOWS:
-            if self.target_arch == Util.ARM64:
-                gn_args += ' target_cpu=\\\"arm64\\\"'
-            elif self.target_arch == Util.AMD64:
-                gn_args += ' target_cpu=\\\"x64\\\"'
+            gn_args += f' target_cpu=\\\"{self.target_cpu}\\\"'
 
         if self.project == 'dawn' and self.args.target_os == Util.WINDOWS:
             gn_args += ' dawn_dxc_enable_asserts_in_ndebug=false dawn_enable_desktop_gl=false dawn_enable_opengles=false dawn_use_x11=false dawn_enable_vulkan=false dawn_use_swiftshader=false'
@@ -463,11 +458,11 @@ examples:
 
         if self.project == 'angle':
             src_files += [
-                'out/%s/args.gn' % self.build_type_cap,
-                'out/%s/../../infra/specs/angle.json' % self.build_type_cap,
+                f'{self.out_dir}/args.gn',
+                f'{self.out_dir}/../../infra/specs/angle.json',
             ]
         elif self.project == 'chromium':
-            src_files += ['out/%s/args.gn' % self.build_type_cap]
+            src_files += [f'{self.out_dir}/args.gn']
             if Util.HOST_OS == Util.WINDOWS:
                 src_files += [
                     'infra/config/generated/builders/try/dawn-win10-x64-deps-rel/targets/chromium.dawn.json',
@@ -498,7 +493,7 @@ examples:
 
         if self.args.backup_target == 'dawn_e2e':
             Util.chdir(backup_path)
-            Util.copy_files(f'out/{self.build_type_cap}', '.')
+            Util.copy_files(self.out_dir, '.')
             shutil.rmtree('out')
 
     def upload(self):
@@ -540,7 +535,7 @@ examples:
             if self.args.run_target == 'dawn_e2e':
                 run_dir = f'backup/{rev_name}'
             else:
-                run_dir = f'backup/{rev_name}/out/{self.build_type_cap}'
+                run_dir = f'backup/{rev_name}/{self.out_dir}'
 
         Util.chdir(run_dir, verbose=True)
         run_target = self.args.run_target

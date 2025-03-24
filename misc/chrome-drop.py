@@ -225,7 +225,7 @@ examples:
                 )
 
             if 'dawn' in self.targets:
-                cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --backup --backup-target dawn_e2e --root-dir {self.dawn_dir}'
+                cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --backup --backup-target dawn_e2e --root-dir {self.dawn_dir} --out-dir release_{self.target_cpu}'
                 if self.args.backup_inplace:
                     cmd += ' --backup-inplace'
                 cmds.append(cmd)
@@ -292,7 +292,7 @@ examples:
             self._execute(cmd, exit_on_error=False)
             Util.append_file(self.exec_log, f'ANGLE Run: {timer.stop()}')
 
-            output_file = f'{self.angle_dir}/backup/{rev_name}/out/Release/output.json'
+            output_file = f'{self.angle_dir}/backup/{rev_name}/out/release_{self.target_cpu}/output.json'
             result_file = f'{self.result_dir}/angle.json'
             if os.path.exists(output_file):
                 shutil.move(output_file, result_file)
@@ -343,10 +343,10 @@ examples:
                 Util.info(f'Use Chrome at {chrome_rev_dir}')
 
                 if Util.HOST_OS == Util.WINDOWS:
-                    chrome = 'out\\Release\\chrome.exe'
+                    chrome = f'out\\release_{self.target_cpu}\\chrome.exe'
                 else:
-                    if os.path.exists('out/Release/chrome'):
-                        chrome = 'out/Release/chrome'
+                    if os.path.exists(f'out/release_{self.target_cpu}/chrome'):
+                        chrome = f'out/release_{self.target_cpu}/chrome'
                     else:
                         chrome = 'out/Default/chrome'
 
@@ -457,10 +457,10 @@ examples:
                 Util.info(f'Use Chrome at {chrome_rev_dir}')
 
                 if Util.HOST_OS == Util.WINDOWS:
-                    chrome = 'out\\Release\\chrome.exe'
+                    chrome = f'out\\release_{self.target_cpu}\\chrome.exe'
                 else:
-                    if os.path.exists('out/Release/chrome'):
-                        chrome = 'out/Release/chrome'
+                    if os.path.exists(f'out/release_{self.target_cpu}/chrome'):
+                        chrome = f'out/release_{self.target_cpu}/chrome'
                     else:
                         chrome = 'out/Default/chrome'
 
