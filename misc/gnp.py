@@ -140,8 +140,11 @@ examples:
             super(Gnp, self).__init__(parser)
         args = self.args
 
-        Util.prepend_path(Util.PROJECT_DEPOT_TOOLS_DIR)
-        Util.prepend_path('%s:%s/python-bin' % (Util.PROJECT_DEPOT_TOOLS_DIR, Util.PROJECT_DEPOT_TOOLS_DIR))
+        if 'workspace' in self.root_dir:
+            self.rbe = False
+        else:
+            self.rbe = True
+        Util.prepend_depot_tools_path(self.rbe)
 
         if args.project:
             project = args.project
@@ -276,6 +279,10 @@ examples:
         self._execute_gclient(cmd_type='runhooks')
 
     def makefile(self):
+        #if self.rbe:
+        #    self._execute(f'autogn {self.target_cpu} release --use-remoteexec')
+        #    return
+
         args = self.args
 
         if args.is_debug:
@@ -300,7 +307,7 @@ examples:
 
         gn_args += ' symbol_level=%s' % self.args.symbol_level
 
-        if args.remote:
+        if self.rbe:
             gn_args += ' use_remoteexec=true reclient_cfg_dir=\\\"//buildtools/reclient_cfgs\\\" use_siso=true'
 
         if self.project == 'chromium':
@@ -371,7 +378,7 @@ examples:
             self._execute('%s lastchange.py -o LASTCHANGE' % Util.PYTHON, exit_on_error=self.exit_on_error)
             Util.chdir(self.root_dir)
 
-        if self.args.remote:
+        if self.rbe:
             Util.chdir(self.out_dir)
             cmd = f'autoninja chrome'
         else:
@@ -379,7 +386,7 @@ examples:
         if self.args.build_verbose:
             cmd += ' -v'
 
-        if self.args.remote:
+        if self.rbe:
             os.system(cmd)
         else:
             self._execute(cmd, show_duration=True)

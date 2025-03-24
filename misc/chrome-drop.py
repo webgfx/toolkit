@@ -116,8 +116,6 @@ examples:
         else:
             super(ChromeDrop, self).__init__(parser)
 
-        Util.prepend_path(Util.PROJECT_DEPOT_TOOLS_DIR)
-
         args = self.args
 
         root_dir = self.root_dir
