@@ -76,9 +76,9 @@ class Gnp(Program):
         parser.add_argument('--download', dest='download', help='download', action='store_true')
 
         parser.add_argument(
-            '--disable-component-build',
-            dest='disable_component_build',
-            help='disable component build',
+            '--enable-component-build',
+            dest='enable_component_build',
+            help='enable component build',
             action='store_true',
         )
         parser.add_argument(
@@ -279,10 +279,6 @@ examples:
         self._execute_gclient(cmd_type='runhooks')
 
     def makefile(self):
-        #if self.rbe:
-        #    self._execute(f'autogn {self.target_cpu} release --use-remoteexec')
-        #    return
-
         args = self.args
 
         if args.is_debug:
@@ -295,10 +291,10 @@ examples:
         else:
             gn_args += ' dcheck_always_on=false'
 
-        if self.args.disable_component_build:
-            gn_args += ' is_component_build=false'
-        else:
+        if self.args.enable_component_build:
             gn_args += ' is_component_build=true'
+        else:
+            gn_args += ' is_component_build=false'
 
         if args.disable_warning_as_error:
             gn_args += ' treat_warnings_as_errors=false'
@@ -308,11 +304,13 @@ examples:
         gn_args += ' symbol_level=%s' % self.args.symbol_level
 
         if self.rbe:
-            gn_args += ' use_remoteexec=true reclient_cfg_dir=\\\"//buildtools/reclient_cfgs\\\" use_siso=true'
+            gn_args += ' use_remoteexec=true reclient_cfg_dir=\\\"//buildtools/reclient_cfgs\\\" use_siso=true use_reclient=true'
 
         if self.project == 'chromium':
             if self.args.symbol_level == 0:
-                gn_args += ' blink_symbol_level=0'
+                gn_args += ' blink_symbol_level=0 v8_symbol_level=0'
+
+            gn_args += ' enable_nacl=false proprietary_codecs=true'
 
             # for windows, it has to use "" instead of ''
             if Util.HOST_OS == Util.WINDOWS:
@@ -320,7 +318,6 @@ examples:
             else:
                 gn_args += ' ffmpeg_branding="Chrome"'
 
-            gn_args += ' enable_nacl=false proprietary_codecs=true'
             if self.args.is_official_build:
                 gn_args += ' is_official_build=true use_cfi_icall=false chrome_pgo_phase=0'
 
@@ -428,15 +425,7 @@ examples:
 
         tmp_files = []
         for target in targets:
-            target_files = (
-                self._execute(
-                    'gn desc %s %s runtime_deps' % (self.out_dir, target),
-                    exit_on_error=self.exit_on_error,
-                    return_out=True,
-                )[1]
-                .rstrip('\n')
-                .split('\n')
-            )
+            target_files = (self._execute(f'gn desc {self.out_dir} {target} runtime_deps', exit_on_error=self.exit_on_error, return_out=True)[1].rstrip('\n').split('\n'))
             tmp_files = Util.union_list(tmp_files, target_files)
 
         # 'gen/', 'obj/', '../../testing/test_env.py', '../../testing/location_tags.json', '../../.vpython'
