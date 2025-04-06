@@ -39,8 +39,8 @@ class Gnp(Program):
         'angle_unit': 'angle_unittests',
         'dawn_e2e': 'dawn_end2end_tests',
         # For chrome drop
-        'webgl_cts_tests': 'chrome/test:telemetry_gpu_integration_test',
-        'webgpu_cts_tests': 'chrome/test:telemetry_gpu_integration_test',
+        'webgl': 'chrome/test:telemetry_gpu_integration_test',
+        'webgpu': 'chrome/test:telemetry_gpu_integration_test',
     }
     BACKUP_TARGET_DICT = {
         'angle_e2e': 'angle_end2end_tests',
@@ -54,8 +54,8 @@ class Gnp(Program):
         'telemetry_gpu_integration_test': '//chrome/test:telemetry_gpu_integration_test',
         'webgpu_blink_web_tests': '//:webgpu_blink_web_tests',
         # For chrome drop
-        'webgl_cts_tests': '//chrome/test:telemetry_gpu_integration_test',
-        'webgpu_cts_tests': '//chrome/test:telemetry_gpu_integration_test',
+        'webgl': '//chrome/test:telemetry_gpu_integration_test',
+        'webgpu': '//chrome/test:telemetry_gpu_integration_test',
     }
 
     def __init__(self, parser):
@@ -142,6 +142,7 @@ examples:
 
         if 'workspace' in self.root_dir:
             self.rbe = False
+            Util.set_env("DEPOT_TOOLS_WIN_TOOLCHAIN", "0")
         else:
             self.rbe = True
         Util.prepend_depot_tools_path(self.rbe)
@@ -375,14 +376,13 @@ examples:
             self._execute('%s lastchange.py -o LASTCHANGE' % Util.PYTHON, exit_on_error=self.exit_on_error)
             Util.chdir(self.root_dir)
 
-        if self.rbe:
-            Util.chdir(self.out_dir)
-            cmd = f'autoninja chrome'
-        else:
-            cmd = f'ninja -j{Util.CPU_COUNT} -k{self.args.build_max_fail} -C {self.out_dir} {" ".join(targets)}'
+        cmd = f'autoninja {" ".join(targets)}'
+        #cmd = f'ninja -j{Util.CPU_COUNT} -k{self.args.build_max_fail} -C {self.out_dir} {" ".join(targets)}'
         if self.args.build_verbose:
             cmd += ' -v'
 
+        print('cmd: %s' % cmd)
+        Util.chdir(self.out_dir)
         if self.rbe:
             os.system(cmd)
         else:
@@ -433,6 +433,10 @@ examples:
         if self.args.backup_target == 'dawn_e2e':
             # Even if we don't build them, they still show up from gn desc. So we need to remove them manually.
             exclude_files.extend(['../..', 'bin/', 'vk', 'vulkan', 'Vk', 'dbg', 'libEGL', 'libGLESv2', 'd3dcompiler_47'])
+        elif self.project == 'webgl':
+            pass
+        elif self.project == 'webgpu':
+            exclude_files.extend(['gen/', 'obj/', '../../testing/test_env.py', '../../testing/location_tags.json'])
 
         src_files = []
         for tmp_file in tmp_files:

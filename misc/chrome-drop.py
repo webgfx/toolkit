@@ -171,9 +171,9 @@ examples:
     def _op(self, op):
         chrome_targets = []
         if 'webgl' in self.targets:
-            chrome_targets += ['webgl_cts_tests']
+            chrome_targets += ['webgl']
         if 'webgpu' in self.targets:
-            chrome_targets += ['webgpu_cts_tests']
+            chrome_targets += ['webgpu']
         chrome_target = ','.join(chrome_targets)
 
         cmds = []
@@ -204,17 +204,11 @@ examples:
 
             if 'dawn' in self.targets:
                 cmds.append(
-                    f'{Util.PYTHON} {self.GNP_SCRIPT} --makefile --build --disable-component-build --build-target dawn_e2e --root-dir {self.dawn_dir}'
+                    f'{Util.PYTHON} {self.GNP_SCRIPT} --makefile --build --build-target dawn_e2e --root-dir {self.dawn_dir}'
                 )
 
-            if (
-                ('webgl' in self.targets or 'webgpu' in self.targets)
-                and self.run_chrome_channel == 'build'
-                and not self.args.build_skip_chrome
-            ):
-                cmds.append(
-                    f'{Util.PYTHON} {self.GNP_SCRIPT} --disable-component-build --makefile --symbol-level 0 --build --build-target {chrome_target} --root-dir {self.chrome_dir}'
-                )
+            if ('webgl' in self.targets or 'webgpu' in self.targets) and self.run_chrome_channel == 'build' and not self.args.build_skip_chrome:
+                cmds.append(f'{Util.PYTHON} {self.GNP_SCRIPT} --makefile --symbol-level 0 --build --build-target {chrome_target} --root-dir {self.chrome_dir}')
 
         elif op == 'backup':
             if 'angle' in self.targets:
