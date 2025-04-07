@@ -64,7 +64,7 @@ class Gnp(Program):
         parser.add_argument('--is-debug', dest='is_debug', help='is debug', action='store_true')
 
         parser.add_argument(
-            '--is-official-build', dest='is_official_build', help='is official build', action='store_true'
+            '--disable-official-build', dest='disable_official_build', help='disable official build', action='store_true'
         )
         parser.add_argument('--vulkan-only', dest='vulkan_only', help='gn args with vulkan only', action='store_true')
 
@@ -319,7 +319,7 @@ examples:
             else:
                 gn_args += ' ffmpeg_branding="Chrome"'
 
-            if self.args.is_official_build:
+            if not self.args.disable_official_build:
                 gn_args += ' is_official_build=true use_cfi_icall=false chrome_pgo_phase=0'
 
         if self.args.vulkan_only:
