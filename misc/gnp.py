@@ -389,6 +389,8 @@ examples:
             self._execute(cmd, show_duration=True)
 
     def backup(self):
+        backup_target = self.args.backup_target
+
         if self.project == 'chromium':
             if self.rev:
                 rev = self.rev
@@ -397,7 +399,7 @@ examples:
             rev_dir = Util.cal_backup_dir(rev)
         else:
             rev_dir = Util.cal_backup_dir()
-        backup_path = '%s/%s' % (self.backup_dir, rev_dir)
+        backup_path = f'{self.backup_dir}/{rev_dir}'
         Util.ensure_dir(self.backup_dir)
 
         Util.info('Begin to backup %s' % rev_dir)
@@ -405,8 +407,8 @@ examples:
             Util.info('Backup folder "%s" alreadys exists' % backup_path)
             os.rename(backup_path, '%s-%s' % (backup_path, Util.get_datetime()))
 
-        if self.args.backup_target:
-            targets = self.args.backup_target.split(',')
+        if backup_target:
+            targets = backup_target.split(',')
         else:
             targets = [self.default_target]
 
@@ -423,6 +425,28 @@ examples:
                 else:
                     targets[index] = '//src/dawn/tests:%s' % target
 
+        if 'webgpu-cts' in targets:
+            #Util.chdir(self.root_dir + '/third_party/webgpu-cts/src')
+            #Util.execute('npm install && npm run standalone')
+            targets.remove('webgpu-cts')
+            Util.ensure_dir(f'{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/src')
+            Util.ensure_dir(f'{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/resources')
+            Util.copy_files(
+                f'{self.root_dir}/third_party/webgpu-cts/src/out',
+                f'{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/src',
+            )
+
+            Util.ensure_nodir(f'{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/src/resources')
+
+            Util.copy_files(
+                f'{self.root_dir}/third_party/webgpu-cts/src/src/resources',
+                f'{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/resources',
+            )
+
+            Util.ensure_dir(f'{backup_path}/gen/third_party/dawn/webgpu-cts')
+            Util.copy_file(f'{self.root_dir}/third_party/dawn/webgpu-cts', 'test_page.html', f'{backup_path}/gen/third_party/dawn/webgpu-cts', need_bk=False)
+            Util.copy_file(f'{self.root_dir}/third_party/dawn/webgpu-cts', 'test_runner.js', f'{backup_path}/gen/third_party/dawn/webgpu-cts', need_bk=False)
+
         tmp_files = []
         for target in targets:
             target_files = (self._execute(f'gn desc {self.out_dir} {target} runtime_deps', exit_on_error=self.exit_on_error, return_out=True)[1].rstrip('\n').split('\n'))
@@ -430,12 +454,12 @@ examples:
 
         # 'gen/', 'obj/', '../../testing/test_env.py', '../../testing/location_tags.json', '../../.vpython'
         exclude_files = []
-        if self.args.backup_target == 'dawn_e2e':
+        if backup_target == 'dawn_e2e':
             # Even if we don't build them, they still show up from gn desc. So we need to remove them manually.
             exclude_files.extend(['../..', 'bin/', 'vk', 'vulkan', 'Vk', 'dbg', 'libEGL', 'libGLESv2', 'd3dcompiler_47'])
-        elif self.project == 'webgl':
+        elif backup_target == 'webgl':
             pass
-        elif self.project == 'webgpu':
+        elif backup_target == 'webgpu':
             exclude_files.extend(['gen/', 'obj/', '../../testing/test_env.py', '../../testing/location_tags.json'])
 
         src_files = []
@@ -461,7 +485,7 @@ examples:
                 f'{self.out_dir}/args.gn',
                 f'{self.out_dir}/../../infra/specs/angle.json',
             ]
-        elif self.project == 'chromium':
+        elif self.project == 'chromium' and 'webgpu-cts' not in backup_target.split(','):
             src_files += [f'{self.out_dir}/args.gn']
             if Util.HOST_OS == Util.WINDOWS:
                 src_files += [
