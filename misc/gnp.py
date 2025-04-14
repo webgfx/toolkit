@@ -384,7 +384,6 @@ examples:
         if self.args.build_verbose:
             cmd += ' -v'
 
-        print('cmd: %s' % cmd)
         Util.chdir(self.out_dir)
         if self.rbe:
             os.system(cmd)
