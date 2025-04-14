@@ -61,6 +61,7 @@ class ChromeDrop(Program):
         )
         parser.add_argument('--upload', dest='upload', help='upload', action='store_true')
         parser.add_argument('--run', dest='run', help='run', action='store_true')
+        parser.add_argument('--run-warp', dest='run_warp', help='run warp', action='store_true')
         parser.add_argument('--run-rev', dest='run_rev', help='run rev, can be out or backup', default='out')
         parser.add_argument('--run-angle-rev', dest='test_angle_rev', help='ANGLE revision', default='latest')
         parser.add_argument(
@@ -409,12 +410,9 @@ examples:
             COMB_INDEX_WEBGL = 0
             COMB_INDEX_BACKEND = 1
             if Util.HOST_OS in [Util.LINUX, Util.DARWIN]:
-                all_combs = [['2.0.1']]
+                all_combs = ['2.0.1']
             elif Util.HOST_OS == Util.WINDOWS:
-                all_combs = [
-                    ['1.0.3', 'd3d11'],
-                    ['2.0.1', 'd3d11'],
-                ]
+                all_combs = ['1.0.3', '2.0.1']
 
             test_combs = []
             if self.run_webgl_target == 'all':
@@ -423,32 +421,36 @@ examples:
                 for i in self.run_webgl_target.split(','):
                     test_combs.append(all_combs[int(i)])
 
+            if self.args.run_warp:
+                use_angle = 'd3d11-warp'
+            else:
+                use_angle = 'd3d11'
+
             for comb in test_combs:
                 # Locally update related conformance_expectations.txt
-                if comb[0] == '1.0.3':
+                if comb == '1.0.3':
                     TestExpectation.update('webgl_cts_tests', chrome_rev_dir)
-                elif comb[0] == '2.0.1':
+                elif comb == '2.0.1':
                     TestExpectation.update('webgl2_cts_tests', chrome_rev_dir)
                 extra_browser_args = '--disable-backgrounding-occluded-windows'
                 if Util.HOST_OS == Util.LINUX and self.run_no_angle:
                     extra_browser_args += ',--use-gl=desktop'
-                cmd = (
-                    common_cmd1
-                    + f' webgl{comb[COMB_INDEX_WEBGL][0]}_conformance {common_cmd2} --webgl-conformance-version={comb[COMB_INDEX_WEBGL]}'
-                )
+                cmd = common_cmd1 + f' webgl{comb[0]}_conformance {common_cmd2} --webgl-conformance-version={comb}'
                 result_file = ''
                 if Util.HOST_OS == Util.LINUX:
-                    result_file = f'{self.result_dir}/webgl-{comb[COMB_INDEX_WEBGL]}.log'
+                    result_file = f'{self.result_dir}/webgl-{comb}.log'
                 elif Util.HOST_OS == Util.WINDOWS:
-                    extra_browser_args += f' --use-angle={comb[COMB_INDEX_BACKEND]}'
-                    result_file = f'{self.result_dir}/webgl-{comb[COMB_INDEX_WEBGL]}-{comb[COMB_INDEX_BACKEND]}.log'
+                    extra_browser_args += f' --use-angle={use_angle}'
+                    result_file = f'{self.result_dir}/webgl-{comb}-{use_angle}.log'
 
+                if self.args.run_warp:
+                    extra_browser_args += ' --enable-features=AllowD3D11WarpFallback --disable-gpu'
                 if extra_browser_args:
                     cmd += f' --extra-browser-args="{extra_browser_args}"'
                 cmd += f' --write-full-results-to {result_file}'
                 timer = Timer()
                 self._execute(cmd, exit_on_error=False, show_duration=True)
-                Util.append_file(self.exec_log, f'WebGL {comb[COMB_INDEX_WEBGL]} run: {timer.stop()}')
+                Util.append_file(self.exec_log, f'WebGL {comb} run: {timer.stop()}')
 
             rev_name, _ = Util.get_backup_dir(f'{os.path.dirname(self.chrome_dir)}/backup', 'latest')
             Util.append_file(self.exec_log, f'Chrome Rev{self.SEPARATOR}{rev_name}')
@@ -510,6 +512,7 @@ examples:
             Util.ensure_dir(self.result_dir)
 
             extra_browser_args = '--js-flags=--expose-gc --force_high_performance_gpu'
+            extra_browser_args = '--js-flags=--expose-gc --use-angle=d3d11-warp --enable-features=AllowD3D11WarpFallback -ignore-gpu-blocklist'
             result_file = f'{self.result_dir}/webgpu.log'
 
             if extra_browser_args:
