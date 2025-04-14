@@ -61,11 +61,11 @@ class ChromeDrop(Program):
         )
         parser.add_argument('--upload', dest='upload', help='upload', action='store_true')
         parser.add_argument('--run', dest='run', help='run', action='store_true')
+        parser.add_argument('--run-rev', dest='run_rev', help='run rev')
         parser.add_argument('--run-angle-rev', dest='test_angle_rev', help='ANGLE revision', default='latest')
         parser.add_argument(
             '--run-chrome-channel', dest='run_chrome_channel', help='run chrome channel', default='build'
         )
-        parser.add_argument('--run-chrome-rev', dest='run_chrome_rev', help='Chromium revision', default='latest')
         parser.add_argument('--run-mesa-rev', dest='run_mesa_rev', help='mesa revision', default='latest')
         parser.add_argument(
             '--run-filter', dest='run_filter', help='WebGL CTS suite to run against', default='all'
@@ -117,12 +117,11 @@ examples:
             super(ChromeDrop, self).__init__(parser)
 
         args = self.args
-
         root_dir = self.root_dir
-        self.angle_dir = f'{self.root_dir}/angle'
-        self.chrome_dir = f'{root_dir}/chromium/src'
-        self.chrome_backup_dir = f'{self.root_dir}/chromium/backup'
-        self.dawn_dir = f'{self.root_dir}/dawn'
+        self.angle_dir = f'{root_dir}/angle'
+        self.chrome_dir = f'{root_dir}/chrome/src'
+        self.chrome_backup_dir = f'{root_dir}/chrome/backup'
+        self.dawn_dir = f'{root_dir}/dawn'
         if args.mesa_dir:
             self.mesa_dir = args.mesa_dir
         else:
@@ -135,7 +134,6 @@ examples:
         self.exec_log = f'{self.result_dir}/exec.log'
         Util.ensure_nofile(self.exec_log)
         self.run_chrome_channel = args.run_chrome_channel
-        self.run_chrome_rev = args.run_chrome_rev
         self.run_mesa_rev = args.run_mesa_rev
         self.run_filter = args.run_filter
         self.run_verbose = args.run_verbose
@@ -207,8 +205,14 @@ examples:
                     f'{Util.PYTHON} {self.GNP_SCRIPT} --makefile --build --build-target dawn_e2e --root-dir {self.dawn_dir}'
                 )
 
-            if ('webgl' in self.targets or 'webgpu' in self.targets) and self.run_chrome_channel == 'build' and not self.args.build_skip_chrome:
-                cmds.append(f'{Util.PYTHON} {self.GNP_SCRIPT} --makefile --symbol-level 0 --build --build-target {chrome_target} --root-dir {self.chrome_dir}')
+            if (
+                ('webgl' in self.targets or 'webgpu' in self.targets)
+                and self.run_chrome_channel == 'build'
+                and not self.args.build_skip_chrome
+            ):
+                cmds.append(
+                    f'{Util.PYTHON} {self.GNP_SCRIPT} --makefile --symbol-level 0 --build --build-target {chrome_target} --root-dir {self.chrome_dir}'
+                )
 
         elif op == 'backup':
             if 'angle' in self.targets:
@@ -264,10 +268,16 @@ examples:
         Util.append_file(self.exec_log, f'OS version{self.SEPARATOR}{os_ver}')
 
         if 'angle' in self.targets:
-            rev_name, _ = Util.get_backup_dir(f'{self.angle_dir}/backup', 'latest')
-            # Locally update angle_end2end_tests_expectations.txt
-            TestExpectation.update('angle_end2end_tests', f'{self.angle_dir}/backup/{rev_name}')
-            cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --run --run-target angle_e2e --run-rev latest --root-dir {self.angle_dir} --disable-exit-on-error'
+            if self.args.run_rev:
+                run_rev = self.args.run_rev
+                output_file = f'{self.angle_dir}/out/release_{self.target_cpu}/output.json'
+                # TestExpectation.update('angle_end2end_tests', f'{self.angle_dir}')
+            else:
+                run_rev = 'latest'
+                rev_name, _ = Util.get_backup_dir(f'{self.angle_dir}/backup', 'latest')
+                output_file = f'{self.angle_dir}/backup/{rev_name}/out/release_{self.target_cpu}/output.json'
+                TestExpectation.update('angle_end2end_tests', f'{self.angle_dir}/backup/{rev_name}')
+            cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --run --run-target angle_e2e --run-rev {run_rev} --root-dir {self.angle_dir} --disable-exit-on-error'
             run_args = ''
             if self.args.dryrun:
                 run_args = '--gtest_filter=*EGLAndroidFrameBufferTargetTest*'
@@ -284,14 +294,16 @@ examples:
             self._execute(cmd, exit_on_error=False)
             Util.append_file(self.exec_log, f'ANGLE Run: {timer.stop()}')
 
-            output_file = f'{self.angle_dir}/backup/{rev_name}/out/release_{self.target_cpu}/output.json'
             result_file = f'{self.result_dir}/angle.json'
             if os.path.exists(output_file):
                 shutil.move(output_file, result_file)
             else:
                 Util.ensure_file(result_file)
 
-            Util.append_file(self.exec_log, f'ANGLE Rev{self.SEPARATOR}{rev_name}')
+            if self.args.run_rev:
+                Util.append_file(self.exec_log, f'ANGLE Rev{self.SEPARATOR}out')
+            else:
+                Util.append_file(self.exec_log, f'ANGLE Rev{self.SEPARATOR}{rev_name}')
 
         if 'dawn' in self.targets:
             all_backends = []
@@ -306,8 +318,13 @@ examples:
                 for i in self.run_dawn_target.split(','):
                     test_backends.append(all_backends[int(i)])
 
+            if self.args.run_rev:
+                run_rev = self.args.run_rev
+            else:
+                run_rev = 'latest'
+
             for backend in test_backends:
-                cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --run --run-target dawn_e2e --run-rev latest --root-dir {self.dawn_dir} --disable-exit-on-error'
+                cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --run --run-target dawn_e2e --run-rev {run_rev} --root-dir {self.dawn_dir} --disable-exit-on-error'
                 result_file = f'{self.result_dir}/dawn-{backend}.json'
                 run_args = f'--gtest_output=json:{result_file}'
                 if self.run_filter != 'all':
@@ -321,16 +338,23 @@ examples:
                 self._execute(cmd, exit_on_error=False)
                 Util.append_file(self.exec_log, f'Dawn-{backend} run: {timer.stop()}')
 
-            rev_name, _ = Util.get_backup_dir(f'{self.dawn_dir}/backup', 'latest')
-            Util.append_file(self.exec_log, f'Dawn Rev{self.SEPARATOR}{rev_name}')
+            if self.args.run_rev:
+                Util.append_file(self.exec_log, f'Dawn Rev{self.SEPARATOR}out')
+            else:
+                rev_name, _ = Util.get_backup_dir(f'{self.dawn_dir}/backup', 'latest')
+                Util.append_file(self.exec_log, f'Dawn Rev{self.SEPARATOR}{rev_name}')
 
         if 'webgl' in self.targets:
             common_cmd1 = 'vpython3 content/test/gpu/run_gpu_integration_test.py'
             common_cmd2 = ' --disable-log-uploads'
             if self.run_chrome_channel == 'build':
-                self.chrome_rev = self.run_chrome_rev
-                (chrome_rev_dir, self.chrome_rev) = Util.get_backup_dir(self.chrome_backup_dir, self.chrome_rev)
-                chrome_rev_dir = f'{self.chrome_backup_dir}/{chrome_rev_dir}'
+                if self.args.run_rev:
+                    self.chrome_rev = self.args.run_rev
+                    chrome_rev_dir = self.chrome_dir
+                else:
+                    self.chrome_rev = self.args.run_rev
+                    (chrome_rev_dir, self.chrome_rev) = Util.get_backup_dir(self.chrome_backup_dir, self.chrome_rev)
+                    chrome_rev_dir = f'{self.chrome_backup_dir}/{chrome_rev_dir}'
                 Util.chdir(chrome_rev_dir, verbose=True)
                 Util.info(f'Use Chrome at {chrome_rev_dir}')
 
@@ -342,7 +366,7 @@ examples:
                     else:
                         chrome = 'out/Default/chrome'
 
-                common_cmd2 += f' --browser=release'
+                common_cmd2 += f' --browser=release_{self.target_cpu}'
             else:
                 common_cmd2 += f' --browser={self.run_chrome_channel}'
                 Util.chdir(self.chrome_dir)
@@ -440,11 +464,14 @@ examples:
             cmd = 'vpython3 content/test/gpu/run_gpu_integration_test.py webgpu_cts --passthrough --stable-jobs'
             cmd += ' --disable-log-uploads'
             if self.run_chrome_channel == 'build':
-                self.chrome_rev = self.run_chrome_rev
-                (chrome_rev_dir, self.chrome_rev) = Util.get_backup_dir(self.chrome_backup_dir, self.chrome_rev)
-                chrome_rev_dir = f'{self.chrome_backup_dir}/{chrome_rev_dir}'
-                # Locally update expectations.txt and slow_tests.txt in webgpu_cts_tests
-                TestExpectation.update('webgpu_cts_tests', chrome_rev_dir)
+                if self.args.run_rev:
+                    chrome_rev_dir = self.chrome_dir
+                else:
+                    self.chrome_rev = self.args.run_rev
+                    (chrome_rev_dir, self.chrome_rev) = Util.get_backup_dir(self.chrome_backup_dir, self.chrome_rev)
+                    chrome_rev_dir = f'{self.chrome_backup_dir}/{chrome_rev_dir}'
+                    # Locally update expectations.txt and slow_tests.txt in webgpu_cts_tests
+                    TestExpectation.update('webgpu_cts_tests', chrome_rev_dir)
                 Util.chdir(chrome_rev_dir, verbose=True)
                 Util.info(f'Use Chrome at {chrome_rev_dir}')
 
@@ -456,7 +483,7 @@ examples:
                     else:
                         chrome = 'out/Default/chrome'
 
-                cmd += f' --browser=release'
+                cmd += f' --browser=release_{self.target_cpu}'
             else:
                 cmd += f' --browser={self.run_chrome_channel}'
                 Util.chdir(self.chrome_dir)

@@ -64,7 +64,10 @@ class Gnp(Program):
         parser.add_argument('--is-debug', dest='is_debug', help='is debug', action='store_true')
 
         parser.add_argument(
-            '--disable-official-build', dest='disable_official_build', help='disable official build', action='store_true'
+            '--disable-official-build',
+            dest='disable_official_build',
+            help='disable official build',
+            action='store_true',
         )
         parser.add_argument('--vulkan-only', dest='vulkan_only', help='gn args with vulkan only', action='store_true')
 
@@ -377,7 +380,7 @@ examples:
             Util.chdir(self.root_dir)
 
         cmd = f'autoninja {" ".join(targets)}'
-        #cmd = f'ninja -j{Util.CPU_COUNT} -k{self.args.build_max_fail} -C {self.out_dir} {" ".join(targets)}'
+        # cmd = f'ninja -j{Util.CPU_COUNT} -k{self.args.build_max_fail} -C {self.out_dir} {" ".join(targets)}'
         if self.args.build_verbose:
             cmd += ' -v'
 
@@ -426,8 +429,8 @@ examples:
                     targets[index] = '//src/dawn/tests:%s' % target
 
         if 'webgpu-cts' in targets:
-            #Util.chdir(self.root_dir + '/third_party/webgpu-cts/src')
-            #Util.execute('npm install && npm run standalone')
+            # Util.chdir(self.root_dir + '/third_party/webgpu-cts/src')
+            # Util.execute('npm install && npm run standalone')
             targets.remove('webgpu-cts')
             Util.ensure_dir(f'{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/src')
             Util.ensure_dir(f'{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/resources')
@@ -444,19 +447,37 @@ examples:
             )
 
             Util.ensure_dir(f'{backup_path}/gen/third_party/dawn/webgpu-cts')
-            Util.copy_file(f'{self.root_dir}/third_party/dawn/webgpu-cts', 'test_page.html', f'{backup_path}/gen/third_party/dawn/webgpu-cts', need_bk=False)
-            Util.copy_file(f'{self.root_dir}/third_party/dawn/webgpu-cts', 'test_runner.js', f'{backup_path}/gen/third_party/dawn/webgpu-cts', need_bk=False)
+            Util.copy_file(
+                f'{self.root_dir}/third_party/dawn/webgpu-cts',
+                'test_page.html',
+                f'{backup_path}/gen/third_party/dawn/webgpu-cts',
+                need_bk=False,
+            )
+            Util.copy_file(
+                f'{self.root_dir}/third_party/dawn/webgpu-cts',
+                'test_runner.js',
+                f'{backup_path}/gen/third_party/dawn/webgpu-cts',
+                need_bk=False,
+            )
 
         tmp_files = []
         for target in targets:
-            target_files = (self._execute(f'gn desc {self.out_dir} {target} runtime_deps', exit_on_error=self.exit_on_error, return_out=True)[1].rstrip('\n').split('\n'))
+            target_files = (
+                self._execute(
+                    f'gn desc {self.out_dir} {target} runtime_deps', exit_on_error=self.exit_on_error, return_out=True
+                )[1]
+                .rstrip('\n')
+                .split('\n')
+            )
             tmp_files = Util.union_list(tmp_files, target_files)
 
         # 'gen/', 'obj/', '../../testing/test_env.py', '../../testing/location_tags.json', '../../.vpython'
         exclude_files = []
         if backup_target == 'dawn_e2e':
             # Even if we don't build them, they still show up from gn desc. So we need to remove them manually.
-            exclude_files.extend(['../..', 'bin/', 'vk', 'vulkan', 'Vk', 'dbg', 'libEGL', 'libGLESv2', 'd3dcompiler_47'])
+            exclude_files.extend(
+                ['../..', 'bin/', 'vk', 'vulkan', 'Vk', 'dbg', 'libEGL', 'libGLESv2', 'd3dcompiler_47']
+            )
         elif backup_target == 'webgl':
             pass
         elif backup_target == 'webgpu':
@@ -760,6 +781,7 @@ examples:
                 cmd += ' --exclusive-device-type-preference=discrete,integrated'
             if Util.HOST_OS == Util.LINUX:
                 cmd += ' --backend=vulkan'
+            cmd += ' --run-suppressed-tests'
             # for output, Chrome build uses --gtest_output=json:%s, standalone build uses --test-launcher-summary-output=%s
 
         self._execute(cmd, exit_on_error=self.exit_on_error)
