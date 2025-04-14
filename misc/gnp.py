@@ -575,7 +575,7 @@ examples:
         if self.args.run_rev == 'out':
             run_dir = self.out_dir
         else:
-            rev_name, _ = Util.get_backup_dir('backup', self.args.run_rev)
+            rev_name, _ = Util.get_backup_dir('backup', 'latest')
             if self.args.run_target == 'dawn_e2e':
                 run_dir = f'backup/{rev_name}'
             else:
