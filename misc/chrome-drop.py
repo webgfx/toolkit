@@ -91,7 +91,7 @@ class ChromeDrop(Program):
             default='all',
         )
         parser.add_argument('--run-no-angle', dest='run_no_angle', help='run without angle', action='store_true')
-        parser.add_argument('--run-jobs', dest='run_jobs', help='run jobs', default=1)
+        parser.add_argument('--run-jobs', dest='run_jobs', help='run jobs', default=0)
         parser.add_argument('--report', dest='report', help='report')
 
         parser.add_argument('--batch', dest='batch', help='batch', action='store_true')
@@ -142,6 +142,14 @@ examples:
         self.run_webgl_target = args.run_webgl_target
         self.run_no_angle = args.run_no_angle
         self.run_rev = args.run_rev
+        if args.run_jobs == 0:
+            _, _, _, _, vendor_id = Util.get_gpu_info()
+            if vendor_id == Util.VENDOR_ID_INTEL:
+                self.run_jobs = 1
+            else:
+                self.run_jobs = 4
+        else:
+            self.run_jobs = args.run_jobs
 
         self.target_os = args.target_os
         if not self.target_os:
@@ -261,7 +269,7 @@ examples:
         if Util.HOST_OS == Util.LINUX:
             self.run_mesa_rev = Util.set_mesa(self.mesa_backup_dir, self.run_mesa_rev)
 
-        gpu_name, gpu_driver_date, gpu_driver_ver, gpu_device_id = Util.get_gpu_info()
+        gpu_name, gpu_driver_date, gpu_driver_ver, gpu_device_id, _ = Util.get_gpu_info()
         Util.append_file(self.exec_log, f'GPU name{self.SEPARATOR}{gpu_name}')
         Util.append_file(self.exec_log, f'GPU driver date{self.SEPARATOR}{gpu_driver_date}')
         Util.append_file(self.exec_log, f'GPU driver version{self.SEPARATOR}{gpu_driver_ver}')
@@ -403,7 +411,7 @@ examples:
             if self.run_verbose:
                 common_cmd2 += ' --verbose'
 
-            common_cmd2 += f' --jobs={self.args.run_jobs}'
+            common_cmd2 += f' --jobs={self.run_jobs}'
 
             Util.ensure_dir(self.result_dir)
 
@@ -507,7 +515,7 @@ examples:
             if self.run_verbose:
                 cmd += ' --verbose'
 
-            cmd += f' --jobs={self.args.run_jobs}'
+            cmd += f' --jobs={self.run_jobs}'
 
             Util.ensure_dir(self.result_dir)
 

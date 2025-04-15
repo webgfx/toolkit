@@ -6,8 +6,9 @@ import sys
 
 HOST_OS = sys.platform
 if HOST_OS == 'win32':
-    lines = subprocess.Popen('dir %s' % __file__.replace(
-        '/', '\\'), shell=True, stdout=subprocess.PIPE).stdout.readlines()
+    lines = subprocess.Popen(
+        'dir %s' % __file__.replace('/', '\\'), shell=True, stdout=subprocess.PIPE
+    ).stdout.readlines()
     for line in lines:
         match = re.search(r'\[(.*)\]', line.decode('utf-8'))
         if match:
@@ -16,8 +17,7 @@ if HOST_OS == 'win32':
     else:
         script_dir = sys.path[0]
 else:
-    lines = subprocess.Popen(
-        'ls -l %s' % __file__, shell=True, stdout=subprocess.PIPE).stdout.readlines()
+    lines = subprocess.Popen('ls -l %s' % __file__, shell=True, stdout=subprocess.PIPE).stdout.readlines()
     for line in lines:
         match = re.search(r'.* -> (.*)', line.decode('utf-8'))
         if match:
@@ -32,6 +32,7 @@ sys.path.append(script_dir + '/..')
 from util.base import *  # pylint: disable=unused-wildcard-import
 from misc.testhelper import *
 
+
 class GPUTest(Program):
     GPUTEST_FOLDER = 'gputest'
 
@@ -41,12 +42,12 @@ class GPUTest(Program):
     if Util.HOST_OS == Util.WINDOWS:
         CHROMIUM_CONFIG_FILES = [
             'infra/config/generated/builders/try/dawn-win10-x64-deps-rel/targets/chromium.dawn.json',
-            'infra/config/generated/builders/try/gpu-fyi-try-win10-intel-rel-64/targets/chromium.gpu.fyi.json'
+            'infra/config/generated/builders/try/gpu-fyi-try-win10-intel-rel-64/targets/chromium.gpu.fyi.json',
         ]
     elif Util.HOST_OS == Util.LINUX:
         CHROMIUM_CONFIG_FILES = [
             'infra/config/generated/builders/try/dawn-linux-x64-deps-rel/targets/chromium.dawn.json',
-            'infra/config/generated/builders/try/gpu-fyi-try-linux-intel-rel/targets/chromium.gpu.fyi.json'
+            'infra/config/generated/builders/try/gpu-fyi-try-linux-intel-rel/targets/chromium.gpu.fyi.json',
         ]
     PROJECT_INFO = {
         'angle': ['%s/%s/angle' % (Util.PROJECT_DIR, GPUTEST_FOLDER), ['infra/specs/angle.json']],
@@ -57,15 +58,15 @@ class GPUTest(Program):
     SKIP_CASES_INDEX_VIRTUAL_NAME = 1
     SKIP_CASES_INDEX_CASES = 2
     SKIP_CASES = [
-        #[Util.WINDOWS, 'dawn_end2end_validation_layers_tests'],
-        #[Util.LINUX, 'dawn_end2end_tests', 'SwapChainTests.SwitchPresentMode/Vulkan_Intel_R_UHD_Graphics_630_CFL_GT2'],
+        # [Util.WINDOWS, 'dawn_end2end_validation_layers_tests'],
+        # [Util.LINUX, 'dawn_end2end_tests', 'SwapChainTests.SwitchPresentMode/Vulkan_Intel_R_UHD_Graphics_630_CFL_GT2'],
     ]
 
     REAL_TYPE_INFO_INDEX_FILTER = 0
     REAL_TYPE_INFO_INDEX_EXTRA_ARGS = 1
     REAL_TYPE_INFO = {
-        'gtest_angle': ['--gtest_filter', ''], # --cfi-diag=0
-        'gtest_chrome': ['--gtest_filter', ''], # --cfi-diag=0
+        'gtest_angle': ['--gtest_filter', ''],  # --cfi-diag=0
+        'gtest_chrome': ['--gtest_filter', ''],  # --cfi-diag=0
         'telemetry_gpu_integration_test': ['--test-filter', '--retry-limit 1 --retry-only-retry-on-failure-tests'],
         'webgpu_blink_web_tests': ['--isolated-script-test-filter', ''],
     }
@@ -76,7 +77,6 @@ class GPUTest(Program):
     VIRTUAL_NAME_INFO = {
         'angle_end2end_tests': ['gtest_angle', 'EGLAndroidFrameBufferTargetTest'],
         'angle_white_box_tests': ['gtest_angle', 'VulkanDescriptorSetTest.AtomicCounterReadLimitedDescriptorPool'],
-
         'dawn_end2end_skip_validation_tests': ['gtest_chrome', 'BindGroupTests', '--adapter-vendor-id=0x8086'],
         'dawn_end2end_tests': ['gtest_chrome', 'ComputeStorageBufferBarrierTests', ''],
         'dawn_end2end_tests_runsuppressed': ['gtest_chrome', 'AlignSmall', ''],
@@ -84,9 +84,11 @@ class GPUTest(Program):
         'dawn_end2end_wire_tests': ['gtest_chrome', 'BindGroupTests'],
         'dawn_perf_tests': ['gtest_chrome', 'BufferUploadPerf.Run/Vulkan_Intel', '--override-steps=1'],
         'vulkan_tests': ['gtest_chrome', 'BasicVulkanTest'],
-
         'info_collection_tests': ['telemetry_gpu_integration_test', 'InfoCollection_basic'],
-        'trace_test': ['telemetry_gpu_integration_test', 'OverlayModeTraceTest_DirectComposition_Video_Disable_Overlays'],
+        'trace_test': [
+            'telemetry_gpu_integration_test',
+            'OverlayModeTraceTest_DirectComposition_Video_Disable_Overlays',
+        ],
         'webgl2_conformance_d3d11_passthrough_tests': ['telemetry_gpu_integration_test', 'conformance/attribs'],
         'webgl_conformance_d3d11_passthrough_tests': ['telemetry_gpu_integration_test', 'conformance/attribs'],
         'webgl2_conformance_gl_passthrough_tests': ['telemetry_gpu_integration_test', 'conformance/attribs'],
@@ -94,7 +96,10 @@ class GPUTest(Program):
         'webgpu_cts_tests': ['telemetry_gpu_integration_test', 'webgpu:idl,constants,flags:*'],
         'webgpu_cts_with_validation_tests': ['telemetry_gpu_integration_test', 'webgpu:idl,constants,flags:*'],
         'webgpu_blink_web_tests': ['webgpu_blink_web_tests', 'wpt_internal/webgpu/adapter_single_use.https.html'],
-        'webgpu_blink_web_tests_with_backend_validation': ['webgpu_blink_web_tests', 'wpt_internal/webgpu/adapter_single_use.https.html'],
+        'webgpu_blink_web_tests_with_backend_validation': [
+            'webgpu_blink_web_tests',
+            'wpt_internal/webgpu/adapter_single_use.https.html',
+        ],
     }
 
     CONFIG_FILE = 'config.json'
@@ -121,7 +126,6 @@ class GPUTest(Program):
 
     SEPARATOR = '|'
 
-
     def __init__(self):
         parser = argparse.ArgumentParser(description='GPU Test')
 
@@ -129,27 +133,43 @@ class GPUTest(Program):
         parser.add_argument('--target', dest='target', help='target', default='all')
         parser.add_argument('--email', dest='email', help='email', action='store_true')
         parser.add_argument('--email-to', dest='email_to', help='email to')
-        parser.add_argument('--location', dest='location', help='local for local backup, remote for remote backup and source for source code', default='default')
+        parser.add_argument(
+            '--location',
+            dest='location',
+            help='local for local backup, remote for remote backup and source for source code',
+            default='default',
+        )
         parser.add_argument('--repeat', dest='repeat', help='repeat', type=int, default=1)
         parser.add_argument('--list', dest='list', help='list', action='store_true')
         parser.add_argument('--sync', dest='sync', help='sync', action='store_true')
-        #parser.add_argument('--sync-skip-roll-dawn', dest='sync_skip_roll_dawn', help='sync skip roll dawn', action='store_true')
+        # parser.add_argument('--sync-skip-roll-dawn', dest='sync_skip_roll_dawn', help='sync skip roll dawn', action='store_true')
         parser.add_argument('--sync-roll-dawn', dest='sync_roll_dawn', help='sync roll dawn', action='store_true')
         parser.add_argument('--build', dest='build', help='build', action='store_true')
-        parser.add_argument('--build-skip-backup', dest='build_skip_backup', help='build skip backup', action='store_true')
+        parser.add_argument(
+            '--build-skip-backup', dest='build_skip_backup', help='build skip backup', action='store_true'
+        )
         parser.add_argument('--backup', dest='backup', help='backup', action='store_true')
         parser.add_argument('--upload', dest='upload', help='upload', action='store_true')
         parser.add_argument('--run', dest='run', help='run', action='store_true')
-        parser.add_argument('--run-mesa-rev', dest='run_mesa_rev', help='run mesa revision, can be system, latest or any specific revision', default='system')
+        parser.add_argument(
+            '--run-mesa-rev',
+            dest='run_mesa_rev',
+            help='run mesa revision, can be system, latest or any specific revision',
+            default='system',
+        )
         parser.add_argument('--dryrun', dest='dryrun', help='dryrun', action='store_true')
-        parser.add_argument('--dryrun-with-shard', dest='dryrun_with_shard', help='dryrun with shard', action='store_true')
+        parser.add_argument(
+            '--dryrun-with-shard', dest='dryrun_with_shard', help='dryrun with shard', action='store_true'
+        )
 
         parser.epilog = '''
 examples:
 {0} {1} --sync --build --backup --upload --email
 {0} {1} --run --email
 {0} {1} --run --location=source --email
-'''.format(Util.PYTHON, parser.prog)
+'''.format(
+            Util.PYTHON, parser.prog
+        )
 
         python_ver = Util.get_python_ver()
         if python_ver[0] == 3:
@@ -248,9 +268,19 @@ examples:
             root_dir = self.PROJECT_INFO[project][self.PROJECT_INFO_INDEX_ROOT_DIR]
 
             if op == 'build':
-                cmd = '%s %s --root-dir %s --disable-component-build --makefile --build --build-target %s' % (Util.PYTHON, self.GNP_SCRIPT, root_dir, ','.join(project_targets[project]))
+                cmd = '%s %s --root-dir %s --disable-component-build --makefile --build --build-target %s' % (
+                    Util.PYTHON,
+                    self.GNP_SCRIPT,
+                    root_dir,
+                    ','.join(project_targets[project]),
+                )
             elif op == 'backup':
-                cmd = '%s %s --root-dir %s --backup --backup-target %s' % (Util.PYTHON, self.GNP_SCRIPT, root_dir, ','.join(project_targets[project]))
+                cmd = '%s %s --root-dir %s --backup --backup-target %s' % (
+                    Util.PYTHON,
+                    self.GNP_SCRIPT,
+                    root_dir,
+                    ','.join(project_targets[project]),
+                )
             elif op == 'upload':
                 cmd = '%s %s --root-dir %s --upload' % (Util.PYTHON, self.GNP_SCRIPT, root_dir)
 
@@ -289,7 +319,7 @@ examples:
 
             Util.append_file(self.exec_log, 'Mesa Revision%s%s' % (self.SEPARATOR, rev_name))
 
-        gpu_name, gpu_driver_date, gpu_driver_ver, gpu_device_id = Util.get_gpu_info()
+        gpu_name, gpu_driver_date, gpu_driver_ver, gpu_device_id, _ = Util.get_gpu_info()
         Util.append_file(self.exec_log, f'GPU name{self.SEPARATOR}{gpu_name}')
         Util.append_file(self.exec_log, f'GPU driver date{self.SEPARATOR}{gpu_driver_date}')
         Util.append_file(self.exec_log, f'GPU driver version{self.SEPARATOR}{gpu_driver_ver}')
@@ -323,15 +353,27 @@ examples:
             project_run_root_dir = project_run_info[project][PROJECT_RUN_INFO_INDEX_ROOT_DIR]
             if project not in logged_projects:
                 logged_projects.append(project)
-                info = '%s Date%s%s' % (project.capitalize(), self.SEPARATOR, project_run_info[project][PROJECT_RUN_INFO_INDEX_DATE])
+                info = '%s Date%s%s' % (
+                    project.capitalize(),
+                    self.SEPARATOR,
+                    project_run_info[project][PROJECT_RUN_INFO_INDEX_DATE],
+                )
                 Util.append_file(self.exec_log, info)
-                info = '%s Revision%s%s' % (project.capitalize(), self.SEPARATOR, project_run_info[project][PROJECT_RUN_INFO_INDEX_REV])
+                info = '%s Revision%s%s' % (
+                    project.capitalize(),
+                    self.SEPARATOR,
+                    project_run_info[project][PROJECT_RUN_INFO_INDEX_REV],
+                )
                 Util.append_file(self.exec_log, info)
 
             virtual_name = self.os_targets[target_index][self.TARGET_INDEX_VIRTUAL_NAME]
             skip = False
             for skip_case in self.SKIP_CASES:
-                if Util.HOST_OS == skip_case[self.SKIP_CASES_INDEX_OS] and virtual_name == skip_case[self.SKIP_CASES_INDEX_VIRTUAL_NAME] and len(skip_case) == self.SKIP_CASES_INDEX_VIRTUAL_NAME + 1:
+                if (
+                    Util.HOST_OS == skip_case[self.SKIP_CASES_INDEX_OS]
+                    and virtual_name == skip_case[self.SKIP_CASES_INDEX_VIRTUAL_NAME]
+                    and len(skip_case) == self.SKIP_CASES_INDEX_VIRTUAL_NAME + 1
+                ):
                     skip = True
                     break
             if skip:
@@ -342,7 +384,12 @@ examples:
 
             real_name = self.os_targets[target_index][self.TARGET_INDEX_REAL_NAME]
             real_type = self.os_targets[target_index][self.TARGET_INDEX_REAL_TYPE]
-            config_cmd = '%s %s --run --root-dir %s --run-target %s --run-rev out' % (Util.PYTHON, self.GNP_SCRIPT, project_run_root_dir, real_name)
+            config_cmd = '%s %s --run --root-dir %s --run-target %s --run-rev out' % (
+                Util.PYTHON,
+                self.GNP_SCRIPT,
+                project_run_root_dir,
+                real_name,
+            )
             if Util.HOST_OS == Util.LINUX:
                 config_cmd += ' --run-mesa-rev %s' % self.args.run_mesa_rev
             run_args = self.os_targets[target_index][self.TARGET_INDEX_RUN_ARGS]
@@ -370,7 +417,7 @@ examples:
                 elif Util.HOST_OS == Util.LINUX:
                     run_args.append('--gtest_filter=*OpenGL*:*Vulkan*')
             if virtual_name in ['info_collection_tests', 'trace_test']:
-                _, _, _, gpu_device_id = Util.get_gpu_info()
+                _, _, _, gpu_device_id, _ = Util.get_gpu_info()
                 if virtual_name == 'info_collection_tests' and gpu_device_id not in run_args:
                     run_args += ['--expected-device-id', gpu_device_id]
                 # All hardware support overlay config for Intel devices
@@ -380,27 +427,14 @@ examples:
                     overlay_config_json_content = {
                         "0x8086": {
                             f"0x{gpu_device_id}": [
-                                {
-                                    "function": "WithDirectComposition"
-                                },
-                                {
-                                    "function": "WithHardwareNV12Support"
-                                },
-                                {
-                                    "function": "WithHardwareYUY2Support"
-                                },
-                                {
-                                    "function": "WithHardwareBGRA8Support"
-                                },
+                                {"function": "WithDirectComposition"},
+                                {"function": "WithHardwareNV12Support"},
+                                {"function": "WithHardwareYUY2Support"},
+                                {"function": "WithHardwareBGRA8Support"},
                                 {
                                     "function": "WithZeroCopyConfig",
-                                    "args": {
-                                        "supports_scaled_video": False,
-                                        "supported_codecs": [
-                                            "H264", "VP9"
-                                        ]
-                                    }
-                                }
+                                    "args": {"supports_scaled_video": False, "supported_codecs": ["H264", "VP9"]},
+                                },
                             ],
                         },
                     }
@@ -424,11 +458,21 @@ examples:
             if args.dryrun and dryrun_cond:
                 if real_type not in ['webgpu_blink_web_tests']:
                     dryrun_cond = '*%s*' % dryrun_cond
-                config_args += ' %s=%s' % (self.REAL_TYPE_INFO[real_type][self.REAL_TYPE_INFO_INDEX_FILTER], dryrun_cond)
+                config_args += ' %s=%s' % (
+                    self.REAL_TYPE_INFO[real_type][self.REAL_TYPE_INFO_INDEX_FILTER],
+                    dryrun_cond,
+                )
             else:
                 for skip_case in self.SKIP_CASES:
-                    if Util.HOST_OS == skip_case[self.SKIP_CASES_INDEX_OS] and virtual_name == skip_case[self.SKIP_CASES_INDEX_VIRTUAL_NAME] and len(skip_case) == self.SKIP_CASES_INDEX_CASES + 1:
-                        config_args += ' %s=-%s' % (self.REAL_TYPE_INFO[real_type][self.REAL_TYPE_INFO_INDEX_FILTER], skip_case[self.SKIP_CASES_INDEX_CASES])
+                    if (
+                        Util.HOST_OS == skip_case[self.SKIP_CASES_INDEX_OS]
+                        and virtual_name == skip_case[self.SKIP_CASES_INDEX_VIRTUAL_NAME]
+                        and len(skip_case) == self.SKIP_CASES_INDEX_CASES + 1
+                    ):
+                        config_args += ' %s=-%s' % (
+                            self.REAL_TYPE_INFO[real_type][self.REAL_TYPE_INFO_INDEX_FILTER],
+                            skip_case[self.SKIP_CASES_INDEX_CASES],
+                        )
 
             if real_type in ['telemetry_gpu_integration_test', 'webgpu_blink_web_tests']:
                 shard_count_arg = '--total-shards'
@@ -464,9 +508,17 @@ examples:
 
                 if real_type in ['gtest_angle', 'webgpu_blink_web_tests']:
                     if real_type == 'gtest_angle':
-                        output_file = '%s/out/%s/output%s' % (project_run_root_dir, self.build_type_cap, self.RESULT_FILE_SUFFIX)
+                        output_file = '%s/out/%s/output%s' % (
+                            project_run_root_dir,
+                            self.build_type_cap,
+                            self.RESULT_FILE_SUFFIX,
+                        )
                     elif real_type == 'webgpu_blink_web_tests':
-                        output_file = '%s/out/%s/layout-test-results/full_results%s' % (project_run_root_dir, self.build_type_cap, self.RESULT_FILE_SUFFIX)
+                        output_file = '%s/out/%s/layout-test-results/full_results%s' % (
+                            project_run_root_dir,
+                            self.build_type_cap,
+                            self.RESULT_FILE_SUFFIX,
+                        )
                     if os.path.exists(output_file):
                         shutil.move(output_file, result_file)
                     else:
@@ -505,10 +557,16 @@ examples:
             name = fields[0]
             if not re.match('run', name, re.I):
                 html += '''
-      <li>%s: %s</li>''' % (name, fields[1])
-        html += '''
+      <li>%s: %s</li>''' % (
+                    name,
+                    fields[1],
+                )
+        html += (
+            '''
       <li>Report: %s</li>
-    </ul>''' % self.timestamp
+    </ul>'''
+            % self.timestamp
+        )
 
         has_details = False
         details_html = '''
@@ -534,7 +592,7 @@ examples:
                 result = self._parse_result(result_file)
                 # Get virtual target name from the op string (12-shard0-webgpu_cts_tests for example)
                 last_dash = op.rfind('-')
-                virtual_name = op[last_dash + 1:]
+                virtual_name = op[last_dash + 1 :]
                 # Count the pass_fail number to fail_fail in dawn_end2end_tests_runsuppressed, because the suppressed tests are expected fail.
                 # There may be regressions that will be calculated into fail_fail cases, but it doesn't matter, dawn_end2end_tests could cover
                 # the regressions and we won't miss them. In dawn_end2end_tests_runsuppressed we only care about the fail_pass cases.
@@ -553,8 +611,14 @@ examples:
 
                 regression_count += len(result.pass_fail)
                 time = fields[1]
-                pass_fail_info = '%s<p>%s' % (len(result.pass_fail), '<p>'.join(result.pass_fail[:self.MAX_FAIL_IN_REPORT]))
-                fail_pass_info = '%s<p>%s' % (len(result.fail_pass), '<p>'.join(result.fail_pass[:self.MAX_FAIL_IN_REPORT]))
+                pass_fail_info = '%s<p>%s' % (
+                    len(result.pass_fail),
+                    '<p>'.join(result.pass_fail[: self.MAX_FAIL_IN_REPORT]),
+                )
+                fail_pass_info = '%s<p>%s' % (
+                    len(result.fail_pass),
+                    '<p>'.join(result.fail_pass[: self.MAX_FAIL_IN_REPORT]),
+                )
                 fail_fail_info = len(result.fail_fail)
                 pass_pass_info = len(result.pass_pass)
 
@@ -573,7 +637,15 @@ examples:
       <td>%s</td>
       <td>%s</td>
       <td>%s</td>
-    </tr>''' % (color, name, time, pass_fail_info, fail_pass_info, fail_fail_info, pass_pass_info)
+    </tr>''' % (
+                color,
+                name,
+                time,
+                pass_fail_info,
+                fail_pass_info,
+                fail_fail_info,
+                pass_pass_info,
+            )
 
         details_html += '''
   </table>'''
@@ -666,7 +738,9 @@ examples:
                             target[self.TARGET_INDEX_PROJECT] = project
                             target[self.TARGET_INDEX_VIRTUAL_NAME] = virtual_name
                             target[self.TARGET_INDEX_REAL_NAME] = real_name
-                            target[self.TARGET_INDEX_REAL_TYPE] = self.VIRTUAL_NAME_INFO[virtual_name][self.VIRTUAL_NAME_INFO_INDEX_REAL_TYPE]
+                            target[self.TARGET_INDEX_REAL_TYPE] = self.VIRTUAL_NAME_INFO[virtual_name][
+                                self.VIRTUAL_NAME_INFO_INDEX_REAL_TYPE
+                            ]
                             if 'args' in target_detail:
                                 target_run_args = target_detail['args']
                             else:
@@ -686,12 +760,25 @@ examples:
                                 target_runsuppressed[self.TARGET_INDEX_PROJECT] = 'chromium'
                                 target_runsuppressed[self.TARGET_INDEX_VIRTUAL_NAME] = virtual_name + '_runsuppressed'
                                 target_runsuppressed[self.TARGET_INDEX_REAL_NAME] = real_name
-                                target_runsuppressed[self.TARGET_INDEX_REAL_TYPE] = self.VIRTUAL_NAME_INFO[virtual_name][self.VIRTUAL_NAME_INFO_INDEX_REAL_TYPE]
-                                target_runsuppressed[self.TARGET_INDEX_RUN_ARGS] = target_run_args + ['--run-suppressed-tests', '--bot-mode']
+                                target_runsuppressed[self.TARGET_INDEX_REAL_TYPE] = self.VIRTUAL_NAME_INFO[
+                                    virtual_name
+                                ][self.VIRTUAL_NAME_INFO_INDEX_REAL_TYPE]
+                                target_runsuppressed[self.TARGET_INDEX_RUN_ARGS] = target_run_args + [
+                                    '--run-suppressed-tests',
+                                    '--bot-mode',
+                                ]
                                 target_runsuppressed[self.TARGET_INDEX_SHARD_COUNT] = target_shard_count
                                 targets.append(target_runsuppressed)
 
-        targets = sorted(targets, key=operator.itemgetter(self.TARGET_INDEX_OS, self.TARGET_INDEX_PROJECT, self.TARGET_INDEX_REAL_TYPE, self.TARGET_INDEX_VIRTUAL_NAME))
+        targets = sorted(
+            targets,
+            key=operator.itemgetter(
+                self.TARGET_INDEX_OS,
+                self.TARGET_INDEX_PROJECT,
+                self.TARGET_INDEX_REAL_TYPE,
+                self.TARGET_INDEX_VIRTUAL_NAME,
+            ),
+        )
         Util.dump_json('%s/%s/config.json' % (ScriptRepo.IGNORE_DIR, self.GPUTEST_FOLDER), targets)
         self.targets = targets
 
@@ -749,6 +836,7 @@ examples:
         if self.args.email:
             subject = '[GPUTest] %s %s %s' % (Util.HOST_NAME, self.timestamp, subject)
             Util.send_email(subject, content, to=self.args.email_to, type='html')
+
 
 if __name__ == '__main__':
     GPUTest()
