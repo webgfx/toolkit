@@ -512,7 +512,6 @@ examples:
             Util.ensure_dir(self.result_dir)
 
             extra_browser_args = '--js-flags=--expose-gc --force_high_performance_gpu'
-            extra_browser_args = '--js-flags=--expose-gc --use-angle=d3d11-warp --enable-features=AllowD3D11WarpFallback -ignore-gpu-blocklist'
             result_file = f'{self.result_dir}/webgpu.log'
 
             if extra_browser_args:
