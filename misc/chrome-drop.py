@@ -39,7 +39,7 @@ class ChromeDrop(Program):
         # Util.LINUX: ['WebglConformance_conformance2_textures_misc_tex_3d_size_limit'],
         Util.LINUX: [],
     }
-    MAX_FAIL_IN_REPORT = 100
+    MAX_FAIL_IN_REPORT = 1000
     SEPARATOR = '|'
 
     def __init__(self):
@@ -147,7 +147,7 @@ examples:
             if vendor_id == Util.VENDOR_ID_INTEL:
                 self.run_jobs = 1
             else:
-                self.run_jobs = 4
+                self.run_jobs = 8
         else:
             self.run_jobs = args.run_jobs
 
@@ -460,8 +460,11 @@ examples:
                 self._execute(cmd, exit_on_error=False, show_duration=True)
                 Util.append_file(self.exec_log, f'WebGL {comb} run: {timer.stop()}')
 
-            rev_name, _ = Util.get_backup_dir(f'{os.path.dirname(self.chrome_dir)}/backup', 'latest')
-            Util.append_file(self.exec_log, f'Chrome Rev{self.SEPARATOR}{rev_name}')
+            if self.run_rev == 'out':
+                Util.append_file(self.exec_log, f'Chrome Rev{self.SEPARATOR}out')
+            else:
+                rev_name, _ = Util.get_backup_dir(f'{os.path.dirname(self.chrome_dir)}/backup', 'latest')
+                Util.append_file(self.exec_log, f'Chrome Rev{self.SEPARATOR}{rev_name}')
 
         if 'webgpu' in self.targets:
             cmd = 'vpython3 content/test/gpu/run_gpu_integration_test.py webgpu_cts --passthrough --stable-jobs'
@@ -529,8 +532,11 @@ examples:
             self._execute(cmd, exit_on_error=False, show_duration=True)
             Util.append_file(self.exec_log, f'WebGPU run: {timer.stop()}')
 
-            rev_name, _ = Util.get_backup_dir(f'{os.path.dirname(self.chrome_dir)}/backup', 'latest')
-            Util.append_file(self.exec_log, f'Chrome Rev{self.SEPARATOR}{rev_name}')
+            if self.run_rev == 'out':
+                Util.append_file(self.exec_log, f'Chrome Rev{self.SEPARATOR}out')
+            else:
+                rev_name, _ = Util.get_backup_dir(f'{os.path.dirname(self.chrome_dir)}/backup', 'latest')
+                Util.append_file(self.exec_log, f'Chrome Rev{self.SEPARATOR}{rev_name}')
 
         self.report()
 
