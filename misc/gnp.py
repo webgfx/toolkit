@@ -386,6 +386,7 @@ examples:
 
         Util.chdir(self.out_dir)
         if self.rbe:
+            print(cmd)
             os.system(cmd)
         else:
             self._execute(cmd, show_duration=True)

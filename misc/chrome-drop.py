@@ -130,9 +130,9 @@ examples:
 
         self.mesa_backup_dir = f'{self.mesa_dir}/backup'
         self.mesa_build_dir = f'{self.mesa_dir}/build'
-        self.result_dir = f'{root_dir}/result/{self.timestamp}'
+        self.results_dir = f'{root_dir}/results/{self.timestamp}'
 
-        self.exec_log = f'{self.result_dir}/exec.log'
+        self.exec_log = f'{self.results_dir}/exec.log'
         Util.ensure_nofile(self.exec_log)
         self.run_chrome_channel = args.run_chrome_channel
         self.run_mesa_rev = args.run_mesa_rev
@@ -147,7 +147,7 @@ examples:
             if vendor_id == Util.VENDOR_ID_INTEL:
                 self.run_jobs = 1
             else:
-                self.run_jobs = 8
+                self.run_jobs = 4
         else:
             self.run_jobs = args.run_jobs
 
@@ -302,7 +302,7 @@ examples:
             self._execute(cmd, exit_on_error=False)
             Util.append_file(self.exec_log, f'ANGLE Run: {timer.stop()}')
 
-            result_file = f'{self.result_dir}/angle.json'
+            result_file = f'{self.results_dir}/angle.json'
             if os.path.exists(output_file):
                 shutil.move(output_file, result_file)
             else:
@@ -328,7 +328,7 @@ examples:
 
             for backend in test_backends:
                 cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --run --run-target dawn_e2e --run-rev {self.run_rev} --root-dir {self.dawn_dir} --disable-exit-on-error'
-                result_file = f'{self.result_dir}/dawn-{backend}.json'
+                result_file = f'{self.results_dir}/dawn-{backend}.json'
                 run_args = f'--gtest_output=json:{result_file}'
                 if self.run_filter != 'all':
                     run_args += f' --gtest_filter=*{self.run_filter}*'
@@ -413,7 +413,7 @@ examples:
 
             common_cmd2 += f' --jobs={self.run_jobs}'
 
-            Util.ensure_dir(self.result_dir)
+            Util.ensure_dir(self.results_dir)
 
             COMB_INDEX_WEBGL = 0
             COMB_INDEX_BACKEND = 1
@@ -446,10 +446,10 @@ examples:
                 cmd = common_cmd1 + f' webgl{comb[0]}_conformance {common_cmd2} --webgl-conformance-version={comb}'
                 result_file = ''
                 if Util.HOST_OS == Util.LINUX:
-                    result_file = f'{self.result_dir}/webgl-{comb}.log'
+                    result_file = f'{self.results_dir}/webgl-{comb}.log'
                 elif Util.HOST_OS == Util.WINDOWS:
                     extra_browser_args += f' --use-angle={use_angle}'
-                    result_file = f'{self.result_dir}/webgl-{comb}-{use_angle}.log'
+                    result_file = f'{self.results_dir}/webgl-{comb}-{use_angle}.log'
 
                 if self.args.run_warp:
                     extra_browser_args += ' --enable-features=AllowD3D11WarpFallback --disable-gpu'
@@ -520,10 +520,10 @@ examples:
 
             cmd += f' --jobs={self.run_jobs}'
 
-            Util.ensure_dir(self.result_dir)
+            Util.ensure_dir(self.results_dir)
 
             extra_browser_args = '--js-flags=--expose-gc --force_high_performance_gpu'
-            result_file = f'{self.result_dir}/webgpu.log'
+            result_file = f'{self.results_dir}/webgpu.log'
 
             if extra_browser_args:
                 cmd += f' --extra-browser-args="{extra_browser_args}"'
@@ -542,12 +542,12 @@ examples:
 
     def report(self):
         if self.args.report:
-            self.result_dir = self.args.report
+            self.results_dir = self.args.report
 
         regression_count = 0
         summary = 'Final summary:\n'
         details = 'Final details:\n'
-        for result_file in os.listdir(self.result_dir):
+        for result_file in os.listdir(self.results_dir):
             if 'angle' in result_file or 'webgl' in result_file or 'webgpu' in result_file:
                 test_type = 'gtest_angle'
             elif 'dawn' in result_file:
@@ -555,7 +555,7 @@ examples:
             else:
                 continue
 
-            result = TestResult(f'{self.result_dir}/{result_file}', test_type)
+            result = TestResult(f'{self.results_dir}/{result_file}', test_type)
             regression_count += len(result.pass_fail)
             result_str = f'{os.path.splitext(result_file)[0]}: PASS_FAIL {len(result.pass_fail)}, FAIL_PASS {len(result.fail_pass)}, FAIL_FAIL {len(result.fail_fail)} PASS_PASS {len(result.pass_pass)}\n'
             summary += result_str
@@ -569,7 +569,7 @@ examples:
             exec_log_content = open(self.exec_log, encoding='utf-8').read()
             Util.info(exec_log_content)
 
-        report_file = f'{self.result_dir}/report.txt'
+        report_file = f'{self.results_dir}/report.txt'
         Util.ensure_nofile(report_file)
         Util.append_file(report_file, summary)
         Util.append_file(report_file, details)
