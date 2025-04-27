@@ -574,7 +574,7 @@ examples:
         Util.append_file(report_file, summary)
         Util.append_file(report_file, details)
 
-        if self.args.email:
+        if self.args.email or Util.HOST_NAME == 'webgfx-100':
             subject = f'[Chrome Drop] {Util.HOST_NAME} {self.timestamp}'
             content = summary + '\n' + details + '\n'
             if os.path.exists(self.exec_log):
