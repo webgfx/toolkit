@@ -98,7 +98,7 @@ class ChromeDrop(Program):
         parser.add_argument('--dryrun', dest='dryrun', help='dryrun', action='store_true')
         parser.add_argument('--mesa-dir', dest='mesa_dir', help='mesa dir')
         parser.add_argument('--run-manual', dest='run_manual', help='run manual', action='store_true')
-        parser.add_argument('--email', dest='email', help='email', action='store_true')
+        parser.add_argument('--email', dest='email', help='email', action='store_true', default=True)
 
         parser.epilog = '''
 examples:
@@ -574,7 +574,7 @@ examples:
         Util.append_file(report_file, summary)
         Util.append_file(report_file, details)
 
-        if self.args.email or Util.HOST_NAME == 'webgfx-100':
+        if self.args.email:
             subject = f'[Chrome Drop] {Util.HOST_NAME} {self.timestamp}'
             content = summary + '\n' + details + '\n'
             if os.path.exists(self.exec_log):
