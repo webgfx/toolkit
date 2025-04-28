@@ -98,7 +98,7 @@ class ChromeDrop(Program):
         parser.add_argument('--dryrun', dest='dryrun', help='dryrun', action='store_true')
         parser.add_argument('--mesa-dir', dest='mesa_dir', help='mesa dir')
         parser.add_argument('--run-manual', dest='run_manual', help='run manual', action='store_true')
-        parser.add_argument('--email', dest='email', help='email', action='store_true', default=True)
+        parser.add_argument('--email', dest='email', help='email', action='store_true')
 
         parser.epilog = '''
 examples:
