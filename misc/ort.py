@@ -114,6 +114,7 @@ examples:
         self.build_type = self.args.build_type
         self.build_dir = f"build/{os_dir}"
         self.install_dir = f'{Util.PROJECT_DIR}/ort-wgpu-install'
+        Util.ensure_dir(self.install_dir)
 
         self._handle_ops()
 
@@ -222,9 +223,9 @@ examples:
 
         Util.chdir(f"{self.root_dir}/{self.build_dir}", verbose=True)
         Util.execute(
-            f'cmake --install {self.build_type} --config {self.build_type} --prefix {self.install_dir}-{self.build_type}', show_cmd=True, show_duration=True
+            f'cmake --install {self.build_type} --config {self.build_type} --prefix {self.install_dir}/{self.build_type}', show_cmd=True, show_duration=True
         )
-        Util.chdir(f"{self.install_dir}", verbose=True)
+        Util.chdir(f"{self.install_dir}/{self.build_type}", verbose=True)
 
         Util.copy_files('bin', 'lib')
         Util.copy_files('include/onnxruntime', 'include')
