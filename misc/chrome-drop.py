@@ -316,7 +316,7 @@ examples:
         if 'dawn' in self.targets:
             all_backends = []
             if Util.HOST_OS == Util.WINDOWS:
-                all_backends = ['d3d12']
+                all_backends = ['d3d11', 'd3d12']
             elif Util.HOST_OS == Util.LINUX:
                 all_backends = ['vulkan']
             test_backends = []
@@ -584,7 +584,6 @@ examples:
     def batch(self):
         self.sync()
         self.build()
-        self.backup()
         self.run()
 
     def _handle_ops(self):
