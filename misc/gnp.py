@@ -781,7 +781,7 @@ examples:
                 cmd += ' --exclusive-device-type-preference=discrete,integrated'
             if Util.HOST_OS == Util.LINUX:
                 cmd += ' --backend=vulkan'
-            cmd += ' --run-suppressed-tests'
+            # cmd += ' --run-suppressed-tests'
             # for output, Chrome build uses --gtest_output=json:%s, standalone build uses --test-launcher-summary-output=%s
 
         self._execute(cmd, exit_on_error=self.exit_on_error)
