@@ -73,21 +73,15 @@ class ChromeDrop(Program):
         )  # For smoke run, we may use conformance/attribs
         parser.add_argument('--run-verbose', dest='run_verbose', help='verbose mode of run', action='store_true')
         parser.add_argument(
-            '--run-dawn-target',
-            dest='run_dawn_target',
-            help='run dawn target, split by comma, like "0,1". 0 for d3d12 and 1 for vulkan',
-            default='all',
-        )
-        parser.add_argument(
             '--run-dawn-validation',
             dest='run_dawn_validation',
             help='run dawn validation, can be disabled, partial or full',
             default='disabled',
         )
         parser.add_argument(
-            '--run-webgl-target',
-            dest='run_webgl_target',
-            help='run webgl target, split by comma, like "0,2"',
+            '--run-target',
+            dest='run_target',
+            help='run target, split by comma, like "0,2"',
             default='all',
         )
         parser.add_argument('--run-no-angle', dest='run_no_angle', help='run without angle', action='store_true')
@@ -138,8 +132,7 @@ examples:
         self.run_mesa_rev = args.run_mesa_rev
         self.run_filter = args.run_filter
         self.run_verbose = args.run_verbose
-        self.run_dawn_target = args.run_dawn_target
-        self.run_webgl_target = args.run_webgl_target
+        self.run_target = args.run_target
         self.run_no_angle = args.run_no_angle
         self.run_rev = args.run_rev
         if args.run_jobs == 0:
@@ -320,10 +313,10 @@ examples:
             elif Util.HOST_OS == Util.LINUX:
                 all_backends = ['vulkan']
             test_backends = []
-            if self.run_dawn_target == 'all':
+            if self.run_target == 'all':
                 test_backends = all_backends
             else:
-                for i in self.run_dawn_target.split(','):
+                for i in self.run_target.split(','):
                     test_backends.append(all_backends[int(i)])
 
             for backend in test_backends:
@@ -423,10 +416,10 @@ examples:
                 all_combs = ['1.0.3', '2.0.1']
 
             test_combs = []
-            if self.run_webgl_target == 'all':
+            if self.run_target == 'all':
                 test_combs = all_combs
             else:
-                for i in self.run_webgl_target.split(','):
+                for i in self.run_target.split(','):
                     test_combs.append(all_combs[int(i)])
 
             if self.args.run_warp:
