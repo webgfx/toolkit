@@ -39,7 +39,6 @@ class ChromeDrop(Program):
         # Util.LINUX: ['WebglConformance_conformance2_textures_misc_tex_3d_size_limit'],
         Util.LINUX: [],
     }
-    MAX_FAIL_IN_REPORT = 1000
     SEPARATOR = '|'
 
     def __init__(self):
@@ -87,6 +86,7 @@ class ChromeDrop(Program):
         parser.add_argument('--run-no-angle', dest='run_no_angle', help='run without angle', action='store_true')
         parser.add_argument('--run-jobs', dest='run_jobs', help='run jobs', default=0)
         parser.add_argument('--report', dest='report', help='report')
+        parser.add_argument('--report-max-fail', dest='report_max_fail', help='max fail in report', default=3, type=int)
 
         parser.add_argument('--batch', dest='batch', help='batch', action='store_true')
         parser.add_argument('--dryrun', dest='dryrun', help='dryrun', action='store_true')
@@ -553,7 +553,7 @@ examples:
             result_str = f'{os.path.splitext(result_file)[0]}: PASS_FAIL {len(result.pass_fail)}, FAIL_PASS {len(result.fail_pass)}, FAIL_FAIL {len(result.fail_fail)} PASS_PASS {len(result.pass_pass)}\n'
             summary += result_str
             if result.pass_fail:
-                result_str += '\n[PASS_FAIL]\n%s\n\n' % '\n'.join(result.pass_fail[: self.MAX_FAIL_IN_REPORT])
+                result_str += '\n[PASS_FAIL]\n%s\n\n' % '\n'.join(result.pass_fail[: self.args.report_max_fail])
             details += result_str
 
         Util.info(details)
