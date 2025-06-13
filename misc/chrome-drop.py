@@ -112,6 +112,14 @@ examples:
             super(ChromeDrop, self).__init__(parser)
 
         args = self.args
+
+        if 'workspace' in self.root_dir:
+            self.rbe = False
+            Util.set_env("DEPOT_TOOLS_WIN_TOOLCHAIN", "0")
+        else:
+            self.rbe = True
+        Util.prepend_depot_tools_path(self.rbe)
+
         root_dir = self.root_dir
         self.angle_dir = f'{root_dir}/angle'
         self.chrome_dir = f'{root_dir}/chrome/src'
