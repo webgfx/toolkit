@@ -1,5 +1,5 @@
 # Get the code
-git clone --recursive https://github.com/webatintel/toolkit.git
+git clone --recursive https://github.com/webgfx/toolkit.git
 
 # Work with GN project
 cd misc && python3 gnp.py --sync --runhooks --makefile --build --backup --build-target=xxx --root-dir=xxx
