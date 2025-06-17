@@ -120,10 +120,11 @@ examples:
             self.rbe = True
         Util.prepend_depot_tools_path(self.rbe)
 
+        self.browser_folder = 'chrome'
         root_dir = self.root_dir
         self.angle_dir = f'{root_dir}/angle'
-        self.chrome_dir = f'{root_dir}/chrome/src'
-        self.chrome_backup_dir = f'{root_dir}/chrome/backup'
+        self.chrome_dir = f'{root_dir}/{self.browser_folder}/src'
+        self.chrome_backup_dir = f'{root_dir}/{self.browser_folder}/backup'
         self.dawn_dir = f'{root_dir}/dawn'
         if args.mesa_dir:
             self.mesa_dir = args.mesa_dir
@@ -212,9 +213,10 @@ examples:
                 )
 
             if 'dawn' in self.targets:
-                cmds.append(
-                    f'{Util.PYTHON} {self.GNP_SCRIPT} --makefile --build --build-target dawn_e2e --root-dir {self.dawn_dir}'
-                )
+                cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --makefile --build --build-target dawn_e2e --root-dir {self.dawn_dir}'
+                if self.args.disable_rbe:
+                    cmd += ' --disable-rbe'
+                cmds.append(cmd)
 
             if (
                 ('webgl' in self.targets or 'webgpu' in self.targets)
@@ -289,7 +291,7 @@ examples:
             cmd = f'{Util.PYTHON} {self.GNP_SCRIPT} --run --run-target angle_e2e --run-rev {self.run_rev} --root-dir {self.angle_dir} --disable-exit-on-error'
             run_args = ''
             if self.args.dryrun:
-                run_args = '--gtest_filter=*EGLAndroidFrameBufferTargetTest*'
+                run_args = '--gtest_filter=*AlphaFuncTest*'
             elif self.run_filter != 'all':
                 run_args = f'--gtest_filter=*{self.run_filter}*'
             elif Util.HOST_OS == Util.WINDOWS:
@@ -349,7 +351,7 @@ examples:
                 Util.append_file(self.exec_log, f'Dawn Rev{self.SEPARATOR}{rev_name}')
 
         if 'webgl' in self.targets:
-            common_cmd1 = 'vpython3 content/test/gpu/run_gpu_integration_test.py'
+            common_cmd1 = 'vpython3.bat content/test/gpu/run_gpu_integration_test.py'
             common_cmd2 = ' --disable-log-uploads'
             if self.run_chrome_channel == 'build':
                 self.chrome_rev = self.run_rev
@@ -468,7 +470,7 @@ examples:
                 Util.append_file(self.exec_log, f'Chrome Rev{self.SEPARATOR}{rev_name}')
 
         if 'webgpu' in self.targets:
-            cmd = 'vpython3 content/test/gpu/run_gpu_integration_test.py webgpu_cts --passthrough --stable-jobs'
+            cmd = 'vpython3.bat content/test/gpu/run_gpu_integration_test.py webgpu_cts --passthrough --stable-jobs'
             cmd += ' --disable-log-uploads'
             if self.run_chrome_channel == 'build':
                 if self.run_rev == 'out':
