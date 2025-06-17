@@ -143,13 +143,6 @@ examples:
             super(Gnp, self).__init__(parser)
         args = self.args
 
-        if 'workspace' in self.root_dir:
-            self.rbe = False
-            Util.set_env("DEPOT_TOOLS_WIN_TOOLCHAIN", "0")
-        else:
-            self.rbe = True
-        Util.prepend_depot_tools_path(self.rbe)
-
         if args.project:
             project = args.project
         else:
@@ -209,6 +202,11 @@ examples:
             self.exit_on_error = False
         else:
             self.exit_on_error = True
+
+        if self.args.disable_rbe:
+            self.rbe = False
+        else:
+            self.rbe = True
 
         if args.rev:
             if re.search('-', args.rev):
@@ -377,18 +375,24 @@ examples:
             Util.info('Begin to build rev %s' % rev)
             Util.chdir(self.root_dir + '/build/util')
             self._execute('%s lastchange.py -o LASTCHANGE' % Util.PYTHON, exit_on_error=self.exit_on_error)
-            Util.chdir(self.root_dir)
 
-        cmd = f'autoninja {" ".join(targets)}'
-        # cmd = f'ninja -j{Util.CPU_COUNT} -k{self.args.build_max_fail} -C {self.out_dir} {" ".join(targets)}'
+        if self.rbe:
+            cmd = f'autoninja {" ".join(targets)}'
+        else:
+
+            cmd = f'ninja -j{Util.CPU_COUNT} -k{self.args.build_max_fail} -C {self.out_dir} {" ".join(targets)}'
         if self.args.build_verbose:
             cmd += ' -v'
 
-        Util.chdir(self.out_dir)
+        # switch between ninja and siso
+        Util.chdir(self.root_dir)
+        os.system(f'gn clean {self.out_dir}')
         if self.rbe:
             print(cmd)
+            Util.chdir(self.out_dir)
             os.system(cmd)
         else:
+            Util.chdir(self.root_dir)
             self._execute(cmd, show_duration=True)
 
     def backup(self):
@@ -666,7 +670,6 @@ examples:
         self.run()
 
     def _execute_gclient(self, cmd_type, job_count=0, extra_cmd='', verbose=False):
-        self._set_boto()
         cmd = 'gclient ' + cmd_type
         if extra_cmd:
             cmd += ' ' + extra_cmd
@@ -679,9 +682,6 @@ examples:
 
         if verbose:
             cmd += ' -v'
-
-        if self.args.proxy:
-            Util.set_proxy(self.proxy_address, self.proxy_port)
 
         self._execute(cmd=cmd, exit_on_error=self.exit_on_error)
 
@@ -747,7 +747,7 @@ examples:
 
     def _run(self, target):
         if target == 'telemetry_gpu_integration_test':
-            cmd = 'vpython3 ../../content/test/gpu/run_gpu_integration_test.py'
+            cmd = f'vpython3.bat ../../content/test/gpu/run_gpu_integration_test.py'
         elif target == 'webgpu_blink_web_tests':
             cmd = 'bin/run_webgpu_blink_web_tests'
             if Util.HOST_OS == Util.WINDOWS:
