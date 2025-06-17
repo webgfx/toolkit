@@ -86,7 +86,7 @@ class ChromeDrop(Program):
         parser.add_argument('--run-no-angle', dest='run_no_angle', help='run without angle', action='store_true')
         parser.add_argument('--run-jobs', dest='run_jobs', help='run jobs', default=0)
         parser.add_argument('--report', dest='report', help='report')
-        parser.add_argument('--report-max-fail', dest='report_max_fail', help='max fail in report', default=200, type=int)
+        parser.add_argument('--report-max-fail', dest='report_max_fail', help='max fail in report', default=1000, type=int)
 
         parser.add_argument('--batch', dest='batch', help='batch', action='store_true')
         parser.add_argument('--dryrun', dest='dryrun', help='dryrun', action='store_true')
