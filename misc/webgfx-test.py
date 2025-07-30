@@ -170,8 +170,8 @@ examples:
         root_dir = self.root_dir.strip("\\")
         self.results_dir = f"{root_dir}/results/{self.timestamp}"
 
-        self.exec_log = f"{self.results_dir}/exec.log"
-        Util.ensure_nofile(self.exec_log)
+        self.run_log = f"{self.results_dir}/run.log"
+        Util.ensure_nofile(self.run_log)
         self.run_chrome_channel = args.run_chrome_channel
         self.run_filter = args.run_filter
         self.run_verbose = args.run_verbose
@@ -208,6 +208,15 @@ examples:
             targets += ["webgpu"]
         target = ",".join(targets)
 
+        if args.run or args.batch:
+            gpu_name, gpu_driver_date, gpu_driver_ver, gpu_device_id, _ = Util.get_gpu_info()
+            Util.append_file(self.run_log, f"GPU name{self.SEPARATOR}{gpu_name}")
+            Util.append_file(self.run_log, f"GPU driver date{self.SEPARATOR}{gpu_driver_date}")
+            Util.append_file(self.run_log, f"GPU driver version{self.SEPARATOR}{gpu_driver_ver}")
+            Util.append_file(self.run_log, f"GPU device id{self.SEPARATOR}{gpu_device_id}")
+            os_ver = Util.get_os_info()
+            Util.append_file(self.run_log, f"OS version{self.SEPARATOR}{os_ver}")
+
         for target in self.targets:
             gnp = Gnp2(root_dir=f'{self.root_dir}/{target}')
             if args.sync or args.batch:
@@ -220,18 +229,11 @@ examples:
                 gnp.backup(target)
             if args.run or args.batch:
                 self.run(gnp, target)
-            if args.report:
-                gnp.report()
+
+        if args.run or args.batch or args.report:
+            self.report()
 
     def run(self, gnp, target):
-        gpu_name, gpu_driver_date, gpu_driver_ver, gpu_device_id, _ = Util.get_gpu_info()
-        Util.append_file(self.exec_log, f"GPU name{self.SEPARATOR}{gpu_name}")
-        Util.append_file(self.exec_log, f"GPU driver date{self.SEPARATOR}{gpu_driver_date}")
-        Util.append_file(self.exec_log, f"GPU driver version{self.SEPARATOR}{gpu_driver_ver}")
-        Util.append_file(self.exec_log, f"GPU device id{self.SEPARATOR}{gpu_device_id}")
-        os_ver = Util.get_os_info()
-        Util.append_file(self.exec_log, f"OS version{self.SEPARATOR}{os_ver}")
-
         if "angle" == target:
             angle_dir = f"{self.root_dir}/{target}"
             if self.run_rev == "out":
@@ -244,7 +246,7 @@ examples:
 
             timer = Timer()
             gnp.run(target, rev=self.run_rev, run_dry=self.args.run_dry)
-            Util.append_file(self.exec_log, f"ANGLE Run: {timer.stop()}")
+            Util.append_file(self.run_log, f"ANGLE Run: {timer.stop()}")
 
             result_file = f"{self.results_dir}/angle.json"
             if os.path.exists(output_file):
@@ -253,9 +255,9 @@ examples:
                 Util.ensure_file(result_file)
 
             if self.run_rev == "out":
-                Util.append_file(self.exec_log, f"ANGLE Rev{self.SEPARATOR}out")
+                Util.append_file(self.run_log, f"ANGLE Rev{self.SEPARATOR}out")
             else:
-                Util.append_file(self.exec_log, f"ANGLE Rev{self.SEPARATOR}{rev_name}")
+                Util.append_file(self.run_log, f"ANGLE Rev{self.SEPARATOR}{rev_name}")
 
         if "dawn" == target:
             all_backends = []
@@ -274,13 +276,13 @@ examples:
                 result_file = f"{self.results_dir}/dawn-{backend}.json"
                 timer = Timer()
                 gnp.run(target, rev=self.run_rev, result_file=result_file, backend=backend, run_dry=self.args.run_dry)
-                Util.append_file(self.exec_log, f"Dawn-{backend} run: {timer.stop()}")
+                Util.append_file(self.run_log, f"Dawn-{backend} run: {timer.stop()}")
 
             if self.run_rev == "out":
-                Util.append_file(self.exec_log, f"Dawn Rev{self.SEPARATOR}out")
+                Util.append_file(self.run_log, f"Dawn Rev{self.SEPARATOR}out")
             else:
                 rev_name, _ = Util.get_backup_dir(f"{self.root_dir}/{target}/backup", "latest")
-                Util.append_file(self.exec_log, f"Dawn Rev{self.SEPARATOR}{rev_name}")
+                Util.append_file(self.run_log, f"Dawn Rev{self.SEPARATOR}{rev_name}")
 
         if "webgl" == target:
             common_cmd1 = "vpython3.bat content/test/gpu/run_gpu_integration_test.py"
@@ -393,13 +395,13 @@ examples:
                 cmd += f" --write-full-results-to {result_file}"
                 timer = Timer()
                 self._execute(cmd, exit_on_error=False, show_duration=True)
-                Util.append_file(self.exec_log, f"WebGL {comb} run: {timer.stop()}")
+                Util.append_file(self.run_log, f"WebGL {comb} run: {timer.stop()}")
 
             if self.run_rev == "out":
-                Util.append_file(self.exec_log, f"Chrome Rev{self.SEPARATOR}out")
+                Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}out")
             else:
                 rev_name, _ = Util.get_backup_dir(f"{os.path.dirname(self.chrome_dir)}/backup", "latest")
-                Util.append_file(self.exec_log, f"Chrome Rev{self.SEPARATOR}{rev_name}")
+                Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}{rev_name}")
 
         if "webgpu" == target:
             cmd = "vpython3.bat content/test/gpu/run_gpu_integration_test.py webgpu_cts --passthrough --stable-jobs"
@@ -465,15 +467,13 @@ examples:
             cmd += f" --write-full-results-to {result_file}"
             timer = Timer()
             self._execute(cmd, exit_on_error=False, show_duration=True)
-            Util.append_file(self.exec_log, f"WebGPU run: {timer.stop()}")
+            Util.append_file(self.run_log, f"WebGPU run: {timer.stop()}")
 
             if self.run_rev == "out":
-                Util.append_file(self.exec_log, f"Chrome Rev{self.SEPARATOR}out")
+                Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}out")
             else:
                 rev_name, _ = Util.get_backup_dir(f"{os.path.dirname(self.chrome_dir)}/backup", "latest")
-                Util.append_file(self.exec_log, f"Chrome Rev{self.SEPARATOR}{rev_name}")
-
-        self.report()
+                Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}{rev_name}")
 
     def report(self):
         if self.args.report:
@@ -500,9 +500,9 @@ examples:
 
         Util.info(details)
         Util.info(summary)
-        if os.path.exists(self.exec_log):
-            exec_log_content = open(self.exec_log, encoding="utf-8").read()
-            Util.info(exec_log_content)
+        if os.path.exists(self.run_log):
+            run_log_content = open(self.run_log, encoding="utf-8").read()
+            Util.info(run_log_content)
 
         report_file = f"{self.results_dir}/report.txt"
         Util.ensure_nofile(report_file)
@@ -512,8 +512,8 @@ examples:
         if self.args.email or self.args.batch:
             subject = f"[Chrome Drop] {Util.HOST_NAME} {self.timestamp}"
             content = summary + "\n" + details + "\n"
-            if os.path.exists(self.exec_log):
-                content += exec_log_content
+            if os.path.exists(self.run_log):
+                content += run_log_content
             Util.send_email(subject, content)
 
 
