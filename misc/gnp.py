@@ -17,9 +17,7 @@ if HOST_OS == "win32":
     else:
         script_dir = sys.path[0]
 else:
-    lines = subprocess.Popen(
-        "ls -l %s" % __file__, shell=True, stdout=subprocess.PIPE
-    ).stdout.readlines()
+    lines = subprocess.Popen("ls -l %s" % __file__, shell=True, stdout=subprocess.PIPE).stdout.readlines()
     for line in lines:
         match = re.search(r".* -> (.*)", line.decode("utf-8"))
         if match:
@@ -62,12 +60,8 @@ class Gnp(Program):
 
     def __init__(self, parser):
         parser.add_argument("--project", dest="project", help="project")
-        parser.add_argument(
-            "--dcheck", dest="dcheck", help="dcheck", action="store_true"
-        )
-        parser.add_argument(
-            "--is-debug", dest="is_debug", help="is debug", action="store_true"
-        )
+        parser.add_argument("--dcheck", dest="dcheck", help="dcheck", action="store_true")
+        parser.add_argument("--is-debug", dest="is_debug", help="is debug", action="store_true")
 
         parser.add_argument(
             "--disable-official-build",
@@ -84,9 +78,7 @@ class Gnp(Program):
 
         parser.add_argument("--out-dir", dest="out_dir", help="out dir")
         parser.add_argument("--rev", dest="rev", help="revision")
-        parser.add_argument(
-            "--rev-stride", dest="rev_stride", help="rev stride", type=int, default=1
-        )
+        parser.add_argument("--rev-stride", dest="rev_stride", help="rev stride", type=int, default=1)
         parser.add_argument(
             "--symbol-level",
             dest="symbol_level",
@@ -95,9 +87,7 @@ class Gnp(Program):
             default=-1,
         )
         parser.add_argument("--batch", dest="batch", help="batch", action="store_true")
-        parser.add_argument(
-            "--download", dest="download", help="download", action="store_true"
-        )
+        parser.add_argument("--download", dest="download", help="download", action="store_true")
 
         parser.add_argument(
             "--enable-component-build",
@@ -131,12 +121,8 @@ class Gnp(Program):
             help="sync src only",
             action="store_true",
         )
-        parser.add_argument(
-            "--runhooks", dest="runhooks", help="runhooks", action="store_true"
-        )
-        parser.add_argument(
-            "--makefile", dest="makefile", help="generate makefile", action="store_true"
-        )
+        parser.add_argument("--runhooks", dest="runhooks", help="runhooks", action="store_true")
+        parser.add_argument("--makefile", dest="makefile", help="generate makefile", action="store_true")
         parser.add_argument(
             "--remote",
             dest="remote",
@@ -164,9 +150,7 @@ class Gnp(Program):
             help="output verbose info. Find log at out/Release/.ninja_log",
             action="store_true",
         )
-        parser.add_argument(
-            "--backup", dest="backup", help="backup", action="store_true"
-        )
+        parser.add_argument("--backup", dest="backup", help="backup", action="store_true")
         parser.add_argument(
             "--backup-inplace",
             dest="backup_inplace",
@@ -179,12 +163,8 @@ class Gnp(Program):
             help="backup symbol",
             action="store_true",
         )
-        parser.add_argument(
-            "--backup-target", dest="backup_target", help="backup target"
-        )
-        parser.add_argument(
-            "--upload", dest="upload", help="upload", action="store_true"
-        )
+        parser.add_argument("--backup-target", dest="backup_target", help="backup target")
+        parser.add_argument("--upload", dest="upload", help="upload", action="store_true")
         parser.add_argument("--run", dest="run", help="run", action="store_true")
         parser.add_argument("--run-target", dest="run_target", help="run target")
         parser.add_argument("--run-output", dest="run_output", help="run output file")
@@ -195,9 +175,7 @@ class Gnp(Program):
             help="run disabled cases",
             action="store_true",
         )
-        parser.add_argument(
-            "--run-filter", dest="run_filter", help="run filter", default="all"
-        )
+        parser.add_argument("--run-filter", dest="run_filter", help="run filter", default="all")
         parser.add_argument("--run-rev", dest="run_rev", help="run rev", default="out")
         parser.add_argument(
             "--run-mesa-rev",
@@ -222,6 +200,13 @@ examples:
         else:
             super(Gnp, self).__init__(parser)
         args = self.args
+
+        if args.disable_rbe:
+            self.rbe = False
+            # Util.set_env("DEPOT_TOOLS_WIN_TOOLCHAIN", "0")
+        else:
+            self.rbe = True
+        # Util.prepend_depot_tools_path(self.rbe)
 
         if args.project:
             project = args.project
@@ -299,21 +284,16 @@ examples:
                 min_rev = args.rev
                 max_rev = args.rev
 
-            if (
-                "." in min_rev
-                and "." not in max_rev
-                or "." not in min_rev
-                and "." in max_rev
-            ):
+            if "." in min_rev and "." not in max_rev or "." not in min_rev and "." in max_rev:
                 Util.error("min_rev and max_rev should be in same format")
 
             if "." in min_rev:
                 integer_rev = int(float(min_rev)) + 1
                 self.integer_rev = integer_rev
                 self.repo.get_info(integer_rev, integer_rev, "main")
-                roll_count = self.repo.info[ChromiumRepo.INFO_INDEX_REV_INFO][
-                    integer_rev
-                ][ChromiumRepo.REV_INFO_INDEX_ROLL_COUNT]
+                roll_count = self.repo.info[ChromiumRepo.INFO_INDEX_REV_INFO][integer_rev][
+                    ChromiumRepo.REV_INFO_INDEX_ROLL_COUNT
+                ]
                 if roll_count <= 1:
                     Util.error("Rev %s cannot be built as a roll")
 
@@ -362,9 +342,7 @@ examples:
             if self.decimal_rev:
                 self._chromium_sync_decimal_rev()
         else:
-            self._execute(
-                "git pull --no-recurse-submodules", exit_on_error=self.exit_on_error
-            )
+            self._execute("git pull --no-recurse-submodules", exit_on_error=self.exit_on_error)
             self._execute_gclient(cmd_type="sync")
 
     def runhooks(self):
@@ -373,6 +351,7 @@ examples:
     def makefile(self):
         args = self.args
 
+        gn_args = ""
         if args.is_debug:
             gn_args = "is_debug=true"
         else:
@@ -393,10 +372,7 @@ examples:
         else:
             gn_args += " treat_warnings_as_errors=true"
 
-        gn_args += " symbol_level=%s" % self.args.symbol_level
-
-        if self.rbe:
-            gn_args += ' use_remoteexec=true reclient_cfg_dir=\\"//buildtools/reclient_cfgs\\" use_reclient=true'
+        # gn_args += " symbol_level=%s" % self.args.symbol_level
 
         if self.project == "chromium":
             if self.args.symbol_level == 0:
@@ -411,16 +387,16 @@ examples:
                 gn_args += ' ffmpeg_branding="Chrome"'
 
             if not self.args.disable_official_build:
-                gn_args += (
-                    " is_official_build=true use_cfi_icall=false chrome_pgo_phase=0"
-                )
+                gn_args += " is_official_build=true use_cfi_icall=false chrome_pgo_phase=0"
 
         if self.args.vulkan_only:
             if self.project == "angle":
                 # angle_enable_glsl=false angle_enable_essl=false angle_enable_hlsl=false
                 gn_args += " angle_enable_gl=false angle_enable_metal=false angle_enable_d3d9=false angle_enable_d3d11=false angle_enable_null=false"
             elif self.project == "dawn":
-                gn_args += " dawn_enable_d3d12=false dawn_enable_metal=false dawn_enable_null=false dawn_enable_opengles=false"
+                gn_args += (
+                    " dawn_enable_d3d12=false dawn_enable_metal=false dawn_enable_null=false dawn_enable_opengles=false"
+                )
 
         if self.args.target_os == Util.ANDROID:
             if Util.HOST_OS == Util.WINDOWS:
@@ -437,14 +413,12 @@ examples:
             # Below gn args couldn't be set
             # gn_args += ' dawn_supports_glfw_for_windowing=false dawn_use_glfw=false dawn_use_windows_ui=false tint_build_cmd_tools=false tint_build_tests=false'
 
-        quotation = Util.get_quotation()
-        cmd = "gn --args=%s%s%s" % (quotation, gn_args, quotation)
-        if args.makefile_vs:
-            cmd += " --ide=vs"
-        cmd += " gen %s" % self.out_dir
-        Util.ensure_dir(self.out_dir)
-        Util.info("GN ARGS: {}".format(gn_args))
-        self._execute(cmd, exit_on_error=self.exit_on_error)
+        cmd = f'autogn {self.target_cpu} {self.build_type}'
+        if self.rbe:
+            cmd += " --use-remoteexec"
+        cmd += ' -a ' + self.root_dir.replace('\\src', '').replace('\\', '/')
+        print(cmd)
+        self._execute(f'{cmd}', exit_on_error=self.exit_on_error)
 
     def build(self):
         build_target = self.args.build_target
@@ -470,19 +444,19 @@ examples:
             )
 
         if self.rbe:
-            cmd = f'autoninja {" ".join(targets)}'
+            cmd = f'autoninja {" ".join(targets)} -C {self.out_dir}'
         else:
-
             cmd = f'ninja -j{Util.CPU_COUNT} -k{self.args.build_max_fail} -C {self.out_dir} {" ".join(targets)}'
         if self.args.build_verbose:
             cmd += " -v"
 
         # switch between ninja and siso
         Util.chdir(self.root_dir)
-        os.system(f"gn clean {self.out_dir}")
+        # os.system(f"gn clean {self.out_dir}")
         if self.rbe:
             print(cmd)
-            Util.chdir(self.out_dir)
+            Util.chdir(self.root_dir)
+            exit(0)
             os.system(cmd)
         else:
             Util.chdir(self.root_dir)
@@ -529,20 +503,14 @@ examples:
             # Util.chdir(self.root_dir + '/third_party/webgpu-cts/src')
             # Util.execute('npm install && npm run standalone')
             targets.remove("webgpu-cts")
-            Util.ensure_dir(
-                f"{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/src"
-            )
-            Util.ensure_dir(
-                f"{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/resources"
-            )
+            Util.ensure_dir(f"{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/src")
+            Util.ensure_dir(f"{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/resources")
             Util.copy_files(
                 f"{self.root_dir}/third_party/webgpu-cts/src/out",
                 f"{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/src",
             )
 
-            Util.ensure_nodir(
-                f"{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/src/resources"
-            )
+            Util.ensure_nodir(f"{backup_path}/gen/third_party/dawn/third_party/webgpu-cts/src/resources")
 
             Util.copy_files(
                 f"{self.root_dir}/third_party/webgpu-cts/src/src/resources",
@@ -628,9 +596,7 @@ examples:
                 f"{self.out_dir}/args.gn",
                 f"{self.out_dir}/../../infra/specs/angle.json",
             ]
-        elif self.project == "chromium" and "webgpu-cts" not in backup_target.split(
-            ","
-        ):
+        elif self.project == "chromium" and "webgpu-cts" not in backup_target.split(","):
             src_files += [f"{self.out_dir}/args.gn"]
             if Util.HOST_OS == Util.WINDOWS:
                 src_files += [
@@ -683,9 +649,7 @@ examples:
                 shutil.make_archive(rev_dir, "zip", rev_dir)
 
         relative_path = (
-            self.root_dir[self.root_dir.index("project") + len("project") + 1 :]
-            .replace("\\", "/")
-            .replace("/src", "")
+            self.root_dir[self.root_dir.index("project") + len("project") + 1 :].replace("\\", "/").replace("/src", "")
         )
         if Util.check_server_backup(relative_path, os.path.basename(rev_backup_file)):
             Util.info("Server already has rev %s" % rev_backup_file)
@@ -778,8 +742,7 @@ examples:
                     % (target_os_tmp, target_arch_tmp, rev, target_os_tmp2)
                 )
             self._execute(
-                "%s %s --show-progress -O %s"
-                % (ScriptRepo.WGET_FILE, archive_url, rev_zip),
+                "%s %s --show-progress -O %s" % (ScriptRepo.WGET_FILE, archive_url, rev_zip),
                 exit_on_error=self.exit_on_error,
             )
             if os.path.getsize(rev_zip) == 0:
@@ -812,16 +775,14 @@ examples:
 
         self._execute(cmd=cmd, exit_on_error=self.exit_on_error)
 
-        if not Util.has_depot_tools_in_path() and os.path.exists(
-            Util.PROJECT_DEPOT_TOOLS_DIR
-        ):
+        if not Util.has_depot_tools_in_path() and os.path.exists(Util.PROJECT_DEPOT_TOOLS_DIR):
             Util.remove_path(Util.PROJECT_DEPOT_TOOLS_DIR)
 
     def _chromium_sync_integer_rev(self):
         if self.integer_rev:
-            roll_repo = self.repo.info[ChromiumRepo.INFO_INDEX_REV_INFO][
-                self.integer_rev
-            ][ChromiumRepo.REV_INFO_INDEX_ROLL_REPO]
+            roll_repo = self.repo.info[ChromiumRepo.INFO_INDEX_REV_INFO][self.integer_rev][
+                ChromiumRepo.REV_INFO_INDEX_ROLL_REPO
+            ]
             if self.decimal_rev and not roll_repo:
                 Util.error("Rev %s is not a roll" % self.integer_rev)
 
@@ -835,9 +796,7 @@ examples:
         if tmp_hash:
             extra_cmd = "--revision src@" + tmp_hash
         else:
-            self._execute(
-                "git pull --no-recurse-submodules", exit_on_error=self.exit_on_error
-            )
+            self._execute("git pull --no-recurse-submodules", exit_on_error=self.exit_on_error)
             extra_cmd = ""
 
         if not self.args.sync_src_only:
@@ -853,10 +812,7 @@ examples:
         if roll_repo:
             if self.decimal_rev:
                 if self.decimal_rev >= roll_count:
-                    Util.error(
-                        "The decimal part of rev cannot be greater or equal to %s"
-                        % roll_count
-                    )
+                    Util.error("The decimal part of rev cannot be greater or equal to %s" % roll_count)
             else:
                 self.decimal_rev = roll_count
         else:
@@ -875,9 +831,7 @@ examples:
         cmd = "git reset --hard %s~%s" % (roll_hash, roll_count_diff)
         self._execute(cmd, exit_on_error=self.exit_on_error)
         cmd = "git rev-parse --abbrev-ref HEAD"
-        branch = self._execute(
-            cmd, show_cmd=False, exit_on_error=self.exit_on_error, return_out=True
-        )[1].strip()
+        branch = self._execute(cmd, show_cmd=False, exit_on_error=self.exit_on_error, return_out=True)[1].strip()
         if not branch == "master":
             Util.error("Repo %s is not on master" % roll_repo)
 

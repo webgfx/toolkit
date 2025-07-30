@@ -18,9 +18,7 @@ if HOST_OS == "win32":
     else:
         SCRIPT_DIR = sys.path[0]
 else:
-    lines = subprocess.Popen(
-        "ls -l %s" % __file__, shell=True, stdout=subprocess.PIPE
-    ).stdout.readlines()
+    lines = subprocess.Popen("ls -l %s" % __file__, shell=True, stdout=subprocess.PIPE).stdout.readlines()
     for tmp_line in lines:
         match = re.search(r".* -> (.*)", tmp_line.decode("utf-8"))
         if match:
@@ -34,9 +32,10 @@ sys.path.append(SCRIPT_DIR + "/..")
 
 from util.base import *
 from misc.testhelper import *
+from misc.gnp2 import Gnp2
 
 
-class ChromeDrop(Program):
+class WebgfxTest(Program):
     SKIP_CASES = {
         # Util.LINUX: ['WebglConformance_conformance2_textures_misc_tex_3d_size_limit'],
         Util.LINUX: [],
@@ -44,38 +43,20 @@ class ChromeDrop(Program):
     SEPARATOR = "|"
 
     def __init__(self):
-        parser = argparse.ArgumentParser(description="Chrome Drop")
+        parser = argparse.ArgumentParser(description="Webgfx tests")
 
         parser.add_argument("--target", dest="target", help="target", default="all")
         parser.add_argument("--sync", dest="sync", help="sync", action="store_true")
-        parser.add_argument(
-            "--sync-skip-mesa",
-            dest="sync_skip_mesa",
-            help="sync skip mesa",
-            action="store_true",
-        )
+        parser.add_argument("--makefile", dest="makefile", help="makefile", action="store_true")
         parser.add_argument("--build", dest="build", help="build", action="store_true")
-        parser.add_argument(
-            "--build-chrome-rev",
-            dest="build_chrome_rev",
-            help="Chrome rev to build",
-            default="latest",
-        )
+
         parser.add_argument(
             "--build-skip-chrome",
             dest="build_skip_chrome",
             help="build skip chrome",
             action="store_true",
         )
-        parser.add_argument(
-            "--build-skip-mesa",
-            dest="build_skip_mesa",
-            help="build skip mesa",
-            action="store_true",
-        )
-        parser.add_argument(
-            "--backup", dest="backup", help="backup", action="store_true"
-        )
+        parser.add_argument("--backup", dest="backup", help="backup", action="store_true")
         parser.add_argument(
             "--backup-inplace",
             dest="backup_inplace",
@@ -88,18 +69,13 @@ class ChromeDrop(Program):
             help="backup skip chrome",
             action="store_true",
         )
-        parser.add_argument(
-            "--upload", dest="upload", help="upload", action="store_true"
-        )
         parser.add_argument("--run", dest="run", help="run", action="store_true")
-        parser.add_argument(
-            "--run-warp", dest="run_warp", help="run warp", action="store_true"
-        )
+        parser.add_argument("--run-warp", dest="run_warp", help="run warp", action="store_true")
         parser.add_argument(
             "--run-rev",
             dest="run_rev",
             help="run rev, can be out or backup",
-            default="out",
+            default="default",
         )
         parser.add_argument(
             "--run-angle-rev",
@@ -150,6 +126,8 @@ class ChromeDrop(Program):
             action="store_true",
         )
         parser.add_argument("--run-jobs", dest="run_jobs", help="run jobs", default=0)
+        parser.add_argument("--run-dry", dest="run_dry", help="dry run", action="store_true")
+        parser.add_argument("--run-manual", dest="run_manual", help="run manual", action="store_true")
         parser.add_argument("--report", dest="report", help="report")
         parser.add_argument(
             "--report-max-fail",
@@ -160,13 +138,6 @@ class ChromeDrop(Program):
         )
 
         parser.add_argument("--batch", dest="batch", help="batch", action="store_true")
-        parser.add_argument(
-            "--dryrun", dest="dryrun", help="dryrun", action="store_true"
-        )
-        parser.add_argument("--mesa-dir", dest="mesa_dir", help="mesa dir")
-        parser.add_argument(
-            "--run-manual", dest="run_manual", help="run manual", action="store_true"
-        )
         parser.add_argument("--email", dest="email", help="email", action="store_true")
 
         parser.epilog = """
@@ -188,37 +159,30 @@ examples:
 
         args = self.args
 
-        if "workspace" in self.root_dir:
+        if args.disable_rbe:
             self.rbe = False
-            Util.set_env("DEPOT_TOOLS_WIN_TOOLCHAIN", "0")
         else:
             self.rbe = True
-        Util.prepend_depot_tools_path(self.rbe)
+        # Util.prepend_depot_tools_path(self.rbe)
 
-        self.browser_folder = "chrome"
-        root_dir = self.root_dir
-        self.angle_dir = f"{root_dir}/angle"
-        self.chrome_dir = f"{root_dir}/{self.browser_folder}/src"
-        self.chrome_backup_dir = f"{root_dir}/{self.browser_folder}/backup"
-        self.dawn_dir = f"{root_dir}/dawn"
-        if args.mesa_dir:
-            self.mesa_dir = args.mesa_dir
-        else:
-            self.mesa_dir = f"{Util.PROJECT_DIR}/mesa"
-
-        self.mesa_backup_dir = f"{self.mesa_dir}/backup"
-        self.mesa_build_dir = f"{self.mesa_dir}/build"
+        self.browser_folder = "cr"
+        # strip the ending "\"
+        root_dir = self.root_dir.strip("\\")
         self.results_dir = f"{root_dir}/results/{self.timestamp}"
 
         self.exec_log = f"{self.results_dir}/exec.log"
         Util.ensure_nofile(self.exec_log)
         self.run_chrome_channel = args.run_chrome_channel
-        self.run_mesa_rev = args.run_mesa_rev
         self.run_filter = args.run_filter
         self.run_verbose = args.run_verbose
         self.run_target = args.run_target
         self.run_no_angle = args.run_no_angle
         self.run_rev = args.run_rev
+        if self.run_rev == "default":
+            if args.backup or args.batch:
+                self.run_rev = "backup"
+            else:
+                self.run_rev = "out"
         if args.run_jobs == 0:
             _, _, _, _, vendor_id = Util.get_gpu_info()
             if vendor_id == Util.VENDOR_ID_INTEL:
@@ -237,173 +201,49 @@ examples:
         else:
             self.targets = args.target.split(",")
 
-        self.chrome_rev = 0
-
-        self._handle_ops()
-
-    def sync(self):
-        self._op("sync")
-
-    def build(self):
-        self._op("build")
-
-    def backup(self):
-        self._op("backup")
-
-    def upload(self):
-        self._op("upload")
-
-    def _op(self, op):
-        chrome_targets = []
+        targets = []
         if "webgl" in self.targets:
-            chrome_targets += ["webgl"]
+            targets += ["webgl"]
         if "webgpu" in self.targets:
-            chrome_targets += ["webgpu"]
-        chrome_target = ",".join(chrome_targets)
+            targets += ["webgpu"]
+        target = ",".join(targets)
 
-        cmds = []
-        if op == "sync":
-            if self.target_os == Util.LINUX and not self.args.sync_skip_mesa:
-                cmds.append(
-                    f"{Util.PYTHON} {ScriptRepo.ROOT_DIR}/mesa/mesa.py --sync --root-dir {self.mesa_dir}"
-                )
+        for target in self.targets:
+            gnp = Gnp2(root_dir=f'{self.root_dir}/{target}')
+            if args.sync or args.batch:
+                gnp.sync()
+            if args.makefile or args.batch:
+                gnp.makefile()
+            if args.build or args.batch:
+                gnp.build(target)
+            if args.backup or args.batch:
+                gnp.backup(target)
+            if args.run or args.batch:
+                self.run(gnp, target)
+            if args.report:
+                gnp.report()
 
-            if "angle" in self.targets:
-                cmds.append(
-                    f"{Util.PYTHON} {self.GNP_SCRIPT} --sync --runhooks --root-dir {self.angle_dir}"
-                )
-
-            if "dawn" in self.targets:
-                cmds.append(
-                    f"{Util.PYTHON} {self.GNP_SCRIPT} --sync --runhooks --root-dir {self.dawn_dir}"
-                )
-
-            if "webgl" in self.targets or "webgpu" in self.targets:
-                cmd = f"{Util.PYTHON} {self.GNP_SCRIPT} --sync --sync-reset --runhooks --root-dir {self.chrome_dir}"
-                if self.args.build_chrome_rev != "latest":
-                    cmd += f" --rev {self.args.build_chrome_rev}"
-                cmds.append(cmd)
-
-        elif op == "build":
-            if self.target_os == Util.LINUX and not self.args.build_skip_mesa:
-                cmds.append(
-                    f"{Util.PYTHON} {ScriptRepo.ROOT_DIR}/mesa/mesa.py --build --root-dir {self.mesa_dir}"
-                )
-
-            if "angle" in self.targets:
-                cmds.append(
-                    f"{Util.PYTHON} {self.GNP_SCRIPT} --makefile --build --build-target angle_e2e --root-dir {self.angle_dir}"
-                )
-
-            if "dawn" in self.targets:
-                cmd = f"{Util.PYTHON} {self.GNP_SCRIPT} --makefile --build --build-target dawn_e2e --root-dir {self.dawn_dir}"
-                if self.args.disable_rbe:
-                    cmd += " --disable-rbe"
-                cmds.append(cmd)
-
-            if (
-                ("webgl" in self.targets or "webgpu" in self.targets)
-                and self.run_chrome_channel == "build"
-                and not self.args.build_skip_chrome
-            ):
-                cmds.append(
-                    f"{Util.PYTHON} {self.GNP_SCRIPT} --makefile --symbol-level 0 --build --build-target {chrome_target} --root-dir {self.chrome_dir}"
-                )
-
-        elif op == "backup":
-            if "angle" in self.targets:
-                cmds.append(
-                    f"{Util.PYTHON} {self.GNP_SCRIPT} --backup --backup-target angle_e2e --root-dir {self.angle_dir}"
-                )
-
-            if "dawn" in self.targets:
-                cmd = f"{Util.PYTHON} {self.GNP_SCRIPT} --backup --backup-target dawn_e2e --root-dir {self.dawn_dir} --out-dir release_{self.target_cpu}"
-                if self.args.backup_inplace:
-                    cmd += " --backup-inplace"
-                cmds.append(cmd)
-
-            if (
-                "webgl" in self.targets or "webgpu" in self.targets
-            ) and not self.args.backup_skip_chrome:
-                cmd = f"{Util.PYTHON} {self.GNP_SCRIPT} --backup --backup-target {chrome_target} --root-dir {self.chrome_dir}"
-                if self.args.backup_inplace:
-                    cmd += " --backup-inplace"
-                if self.target_os == Util.CHROMEOS:
-                    cmd += " --target-os chromeos"
-                cmds.append(cmd)
-
-        elif op == "upload":
-            if "angle" in self.targets:
-                cmds.append(
-                    f"{Util.PYTHON} {self.GNP_SCRIPT} --upload --root-dir {self.angle_dir}"
-                )
-
-            if "dawn" in self.targets:
-                cmds.append(
-                    f"{Util.PYTHON} {self.GNP_SCRIPT} --upload --root-dir {self.dawn_dir}"
-                )
-
-            if (
-                "webgl" in self.targets or "webgpu" in self.targets
-            ) and not self.args.backup_skip_chrome:
-                cmd = f"{Util.PYTHON} {self.GNP_SCRIPT} --upload --root-dir {self.chrome_dir}"
-                if self.target_os == Util.CHROMEOS:
-                    cmd += " --target-os chromeos"
-                cmds.append(cmd)
-
-        for cmd in cmds:
-            self._execute(cmd, exit_on_error=False)
-
-    def run(self):
-        if self.target_os == Util.CHROMEOS:
-            return
-
-        Util.clear_proxy()
-
-        if Util.HOST_OS == Util.LINUX:
-            self.run_mesa_rev = Util.set_mesa(self.mesa_backup_dir, self.run_mesa_rev)
-
-        gpu_name, gpu_driver_date, gpu_driver_ver, gpu_device_id, _ = (
-            Util.get_gpu_info()
-        )
+    def run(self, gnp, target):
+        gpu_name, gpu_driver_date, gpu_driver_ver, gpu_device_id, _ = Util.get_gpu_info()
         Util.append_file(self.exec_log, f"GPU name{self.SEPARATOR}{gpu_name}")
-        Util.append_file(
-            self.exec_log, f"GPU driver date{self.SEPARATOR}{gpu_driver_date}"
-        )
-        Util.append_file(
-            self.exec_log, f"GPU driver version{self.SEPARATOR}{gpu_driver_ver}"
-        )
+        Util.append_file(self.exec_log, f"GPU driver date{self.SEPARATOR}{gpu_driver_date}")
+        Util.append_file(self.exec_log, f"GPU driver version{self.SEPARATOR}{gpu_driver_ver}")
         Util.append_file(self.exec_log, f"GPU device id{self.SEPARATOR}{gpu_device_id}")
         os_ver = Util.get_os_info()
         Util.append_file(self.exec_log, f"OS version{self.SEPARATOR}{os_ver}")
 
-        if "angle" in self.targets:
+        if "angle" == target:
+            angle_dir = f"{self.root_dir}/{target}"
             if self.run_rev == "out":
-                output_file = (
-                    f"{self.angle_dir}/out/release_{self.target_cpu}/output.json"
-                )
-                # TestExpectation.update('angle_end2end_tests', f'{self.angle_dir}')
+                output_file = f"{angle_dir}/out/release_{self.target_cpu}/output.json"
+                # TestExpectation.update('angle_end2end_tests', f'{angle_dir}')
             else:
-                rev_name, _ = Util.get_backup_dir(f"{self.angle_dir}/backup", "latest")
-                output_file = f"{self.angle_dir}/backup/{rev_name}/out/release_{self.target_cpu}/output.json"
-                TestExpectation.update(
-                    "angle_end2end_tests", f"{self.angle_dir}/backup/{rev_name}"
-                )
-            cmd = f"{Util.PYTHON} {self.GNP_SCRIPT} --run --run-target angle_e2e --run-rev {self.run_rev} --root-dir {self.angle_dir} --disable-exit-on-error"
-            run_args = ""
-            if self.args.dryrun:
-                run_args = "--gtest_filter=*AlphaFuncTest*"
-            elif self.run_filter != "all":
-                run_args = f"--gtest_filter=*{self.run_filter}*"
-            elif Util.HOST_OS == Util.WINDOWS:
-                run_args = "--gtest_filter=*D3D11*"
-            else:
-                run_args = ""
+                rev_name, _ = Util.get_backup_dir(f"{angle_dir}/backup", "latest")
+                output_file = f"{angle_dir}/backup/{rev_name}/out/release_{self.target_cpu}/output.json"
+                # TestExpectation.update("angle_end2end_tests", f"{angle_dir}/backup/{rev_name}")
 
-            if run_args:
-                cmd += f' --run-args="{run_args}"'
             timer = Timer()
-            self._execute(cmd, exit_on_error=False)
+            gnp.run(target, rev=self.run_rev, run_dry=self.args.run_dry)
             Util.append_file(self.exec_log, f"ANGLE Run: {timer.stop()}")
 
             result_file = f"{self.results_dir}/angle.json"
@@ -417,10 +257,9 @@ examples:
             else:
                 Util.append_file(self.exec_log, f"ANGLE Rev{self.SEPARATOR}{rev_name}")
 
-        if "dawn" in self.targets:
+        if "dawn" == target:
             all_backends = []
             if Util.HOST_OS == Util.WINDOWS:
-                # all_backends = ['d3d11', 'd3d12']
                 all_backends = ["d3d12"]
             elif Util.HOST_OS == Util.LINUX:
                 all_backends = ["vulkan"]
@@ -432,29 +271,18 @@ examples:
                     test_backends.append(all_backends[int(i)])
 
             for backend in test_backends:
-                cmd = f"{Util.PYTHON} {self.GNP_SCRIPT} --run --run-target dawn_e2e --run-rev {self.run_rev} --root-dir {self.dawn_dir} --disable-exit-on-error"
                 result_file = f"{self.results_dir}/dawn-{backend}.json"
-                run_args = f"--gtest_output=json:{result_file}"
-                if self.run_filter != "all":
-                    run_args += f" --gtest_filter=*{self.run_filter}*"
-                if self.args.dryrun:
-                    run_args += " --gtest_filter=*BindGroupTests*"
-                run_args += (
-                    f" --enable-backend-validation={self.args.run_dawn_validation}"
-                )
-                run_args += f" --backend={backend}"
-                cmd += f' --run-args="{run_args}"'
                 timer = Timer()
-                self._execute(cmd, exit_on_error=False)
+                gnp.run(target, rev=self.run_rev, result_file=result_file, backend=backend, run_dry=self.args.run_dry)
                 Util.append_file(self.exec_log, f"Dawn-{backend} run: {timer.stop()}")
 
             if self.run_rev == "out":
                 Util.append_file(self.exec_log, f"Dawn Rev{self.SEPARATOR}out")
             else:
-                rev_name, _ = Util.get_backup_dir(f"{self.dawn_dir}/backup", "latest")
+                rev_name, _ = Util.get_backup_dir(f"{self.root_dir}/{target}/backup", "latest")
                 Util.append_file(self.exec_log, f"Dawn Rev{self.SEPARATOR}{rev_name}")
 
-        if "webgl" in self.targets:
+        if "webgl" == target:
             common_cmd1 = "vpython3.bat content/test/gpu/run_gpu_integration_test.py"
             common_cmd2 = " --disable-log-uploads"
             if self.run_chrome_channel == "build":
@@ -462,9 +290,7 @@ examples:
                 if self.run_rev == "out":
                     chrome_rev_dir = self.chrome_dir
                 else:
-                    chrome_rev_dir, _ = Util.get_backup_dir(
-                        self.chrome_backup_dir, "latest"
-                    )
+                    chrome_rev_dir, _ = Util.get_backup_dir(self.chrome_backup_dir, "latest")
                     chrome_rev_dir = f"{self.chrome_backup_dir}/{chrome_rev_dir}"
                 Util.chdir(chrome_rev_dir, verbose=True)
                 Util.info(f"Use Chrome at {chrome_rev_dir}")
@@ -509,7 +335,7 @@ examples:
 
             if self.run_filter != "all":
                 common_cmd2 += f" --test-filter=*{self.run_filter}*"
-            if self.args.dryrun:
+            if self.args.run_dry:
                 # common_cmd2 += ' --test-filter=*copy-texture-image-same-texture*::*ext-texture-norm16*'
                 common_cmd2 += " --test-filter=*conformance/attribs*"
 
@@ -552,10 +378,7 @@ examples:
                 extra_browser_args = "--disable-backgrounding-occluded-windows"
                 if Util.HOST_OS == Util.LINUX and self.run_no_angle:
                     extra_browser_args += ",--use-gl=desktop"
-                cmd = (
-                    common_cmd1
-                    + f" webgl{comb[0]}_conformance {common_cmd2} --webgl-conformance-version={comb}"
-                )
+                cmd = common_cmd1 + f" webgl{comb[0]}_conformance {common_cmd2} --webgl-conformance-version={comb}"
                 result_file = ""
                 if Util.HOST_OS == Util.LINUX:
                     result_file = f"{self.results_dir}/webgl-{comb}.log"
@@ -564,9 +387,7 @@ examples:
                     result_file = f"{self.results_dir}/webgl-{comb}-{use_angle}.log"
 
                 if self.args.run_warp:
-                    extra_browser_args += (
-                        " --enable-features=AllowD3D11WarpFallback --disable-gpu"
-                    )
+                    extra_browser_args += " --enable-features=AllowD3D11WarpFallback --disable-gpu"
                 if extra_browser_args:
                     cmd += f' --extra-browser-args="{extra_browser_args}"'
                 cmd += f" --write-full-results-to {result_file}"
@@ -577,21 +398,17 @@ examples:
             if self.run_rev == "out":
                 Util.append_file(self.exec_log, f"Chrome Rev{self.SEPARATOR}out")
             else:
-                rev_name, _ = Util.get_backup_dir(
-                    f"{os.path.dirname(self.chrome_dir)}/backup", "latest"
-                )
+                rev_name, _ = Util.get_backup_dir(f"{os.path.dirname(self.chrome_dir)}/backup", "latest")
                 Util.append_file(self.exec_log, f"Chrome Rev{self.SEPARATOR}{rev_name}")
 
-        if "webgpu" in self.targets:
+        if "webgpu" == target:
             cmd = "vpython3.bat content/test/gpu/run_gpu_integration_test.py webgpu_cts --passthrough --stable-jobs"
             cmd += " --disable-log-uploads"
             if self.run_chrome_channel == "build":
                 if self.run_rev == "out":
                     chrome_rev_dir = self.chrome_dir
                 else:
-                    chrome_rev_dir, _ = Util.get_backup_dir(
-                        self.chrome_backup_dir, "latest"
-                    )
+                    chrome_rev_dir, _ = Util.get_backup_dir(self.chrome_backup_dir, "latest")
                     chrome_rev_dir = f"{self.chrome_backup_dir}/{chrome_rev_dir}"
                     # Locally update expectations.txt and slow_tests.txt in webgpu_cts_tests
                     TestExpectation.update("webgpu_cts_tests", chrome_rev_dir)
@@ -628,8 +445,10 @@ examples:
 
             if self.run_filter != "all":
                 cmd += f" --test-filter=*{self.run_filter}*"
-            if self.args.dryrun:
-                cmd += " --test-filter=*webgpu:api,operation,render_pipeline,pipeline_output_targets:color,attachments:*"
+            if self.args.run_dry:
+                cmd += (
+                    " --test-filter=*webgpu:api,operation,render_pipeline,pipeline_output_targets:color,attachments:*"
+                )
 
             if self.run_verbose:
                 cmd += " --verbose"
@@ -651,9 +470,7 @@ examples:
             if self.run_rev == "out":
                 Util.append_file(self.exec_log, f"Chrome Rev{self.SEPARATOR}out")
             else:
-                rev_name, _ = Util.get_backup_dir(
-                    f"{os.path.dirname(self.chrome_dir)}/backup", "latest"
-                )
+                rev_name, _ = Util.get_backup_dir(f"{os.path.dirname(self.chrome_dir)}/backup", "latest")
                 Util.append_file(self.exec_log, f"Chrome Rev{self.SEPARATOR}{rev_name}")
 
         self.report()
@@ -666,11 +483,7 @@ examples:
         summary = "Final summary:\n"
         details = "Final details:\n"
         for result_file in os.listdir(self.results_dir):
-            if (
-                "angle" in result_file
-                or "webgl" in result_file
-                or "webgpu" in result_file
-            ):
+            if "angle" in result_file or "webgl" in result_file or "webgpu" in result_file:
                 test_type = "gtest_angle"
             elif "dawn" in result_file:
                 test_type = "dawn"
@@ -682,9 +495,7 @@ examples:
             result_str = f"{os.path.splitext(result_file)[0]}: PASS_FAIL {len(result.pass_fail)}, FAIL_PASS {len(result.fail_pass)}, FAIL_FAIL {len(result.fail_fail)} PASS_PASS {len(result.pass_pass)}\n"
             summary += result_str
             if result.pass_fail:
-                result_str += "\n[PASS_FAIL]\n%s\n\n" % "\n".join(
-                    result.pass_fail[: self.args.report_max_fail]
-                )
+                result_str += "\n[PASS_FAIL]\n%s\n\n" % "\n".join(result.pass_fail[: self.args.report_max_fail])
             details += result_str
 
         Util.info(details)
@@ -705,28 +516,6 @@ examples:
                 content += exec_log_content
             Util.send_email(subject, content)
 
-    def batch(self):
-        self.sync()
-        self.build()
-        self.run()
-
-    def _handle_ops(self):
-        args = self.args
-        if args.sync:
-            self.sync()
-        if args.build:
-            self.build()
-        if args.backup:
-            self.backup()
-        if args.run:
-            self.run()
-        if args.report:
-            self.report()
-        if args.batch:
-            self.batch()
-        if args.upload:
-            self.upload()
-
 
 if __name__ == "__main__":
-    ChromeDrop()
+    WebgfxTest()
