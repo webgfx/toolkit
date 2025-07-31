@@ -6,7 +6,9 @@ import sys
 
 HOST_OS = sys.platform
 if HOST_OS == 'win32':
-    lines = subprocess.Popen('dir %s' % __file__.replace('/', '\\'), shell=True, stdout=subprocess.PIPE).stdout.readlines()
+    lines = subprocess.Popen(
+        'dir %s' % __file__.replace('/', '\\'), shell=True, stdout=subprocess.PIPE
+    ).stdout.readlines()
     for line in lines:
         match = re.search(r'\[(.*)\]', line.decode('utf-8'))
         if match:
@@ -27,13 +29,19 @@ else:
 sys.path.append(script_dir)
 sys.path.append(script_dir + '/..')
 
-from util.base import * # pylint: disable=unused-wildcard-import
+from util.base import *  # pylint: disable=unused-wildcard-import
+
 
 class Cros(Program):
     def __init__(self):
         parser = argparse.ArgumentParser(description='ChromeOS Script')
 
-        parser.add_argument('--board', dest='board', help='board, which can be amd64-generic, peppy for C720, link for pixel2013, samus for pixel2015, auron_yuna for C910', default='amd64-generic')
+        parser.add_argument(
+            '--board',
+            dest='board',
+            help='board, which can be amd64-generic, peppy for C720, link for pixel2013, samus for pixel2015, auron_yuna for C910',
+            default='amd64-generic',
+        )
         parser.add_argument('--image-type', dest='image_type', help='image type, can be dev or test', default='test')
         parser.add_argument('--init', dest='init', help='init', action='store_true')
         parser.add_argument('--delete', dest='delete', help='delete sdk', action='store_true')
@@ -47,7 +55,9 @@ class Cros(Program):
 examples:
 {0} {1} --board samus --sync --build
 {0} {1} --board auron_yuna --chrome-dir /workspace/project/chromium --pkg chrome
-'''.format(Util.PYTHON, parser.prog)
+'''.format(
+            Util.PYTHON, parser.prog
+        )
 
         python_ver = Util.get_python_ver()
         if python_ver[0] == 3:
@@ -69,9 +79,10 @@ examples:
         if args.flash:
             self.flash()
 
-
     def init(self):
-        self._execute('repo init -u https://chromium.googlesource.com/chromiumos/manifest.git --repo-url https://chromium.googlesource.com/external/repo.git')
+        self._execute(
+            'repo init -u https://chromium.googlesource.com/chromiumos/manifest.git --repo-url https://chromium.googlesource.com/external/repo.git'
+        )
         Util.ensure_pkg('thin-provisioning-tools lvm2')
 
     def delete(self):
@@ -130,22 +141,31 @@ examples:
         if not os.path.exists('chroot/build/%s' % board):
             self._setup_board()
 
-        #self._execute('cros_sdk -- ./enable_localaccount.sh wp')
-        #self.workon()
+        # self._execute('cros_sdk -- ./enable_localaccount.sh wp')
+        # self.workon()
 
         self._execute('cros_sdk -- ./build_packages --nowithautotest --board=%s --jobs=%s' % (board, Util.CPU_COUNT))
         # interactive=True will cause problem with build_image. Use interactive=False or replace tune2fs with older version
         if True:
-            self._execute('cros_sdk -- ./build_image --board=%s --jobs=%s --noenable_rootfs_verification %s' % (board, Util.CPU_COUNT, args.image_type))
+            self._execute(
+                'cros_sdk -- ./build_image --board=%s --jobs=%s --noenable_rootfs_verification %s'
+                % (board, Util.CPU_COUNT, args.image_type)
+            )
         else:
-            copy_file(dir_share_linux_tool, 'tune2fs-1.42.13', dir_project_chromeos + '/chroot/sbin', 'tune2fs', is_sylk=True)
-            self._execute('cros_sdk -- ./build_image --board=%s --jobs=%s --noenable_rootfs_verification %s' % (board, Util.CPU_COUNT, args.image_type))
+            copy_file(
+                dir_share_linux_tool, 'tune2fs-1.42.13', dir_project_chromeos + '/chroot/sbin', 'tune2fs', is_sylk=True
+            )
+            self._execute(
+                'cros_sdk -- ./build_image --board=%s --jobs=%s --noenable_rootfs_verification %s'
+                % (board, Util.CPU_COUNT, args.image_type)
+            )
 
     def flash(self):
         self._execute('cros_sdk -- cros flash usb:// --board=%s' % self.board)
 
     def _setup_board(self):
         self._execute('cros_sdk -- setup_board --force --board=%s' % self.board)
+
 
 if __name__ == '__main__':
     Cros()

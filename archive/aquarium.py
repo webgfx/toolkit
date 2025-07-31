@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 import sys
+
 lines = subprocess.Popen('dir %s' % __file__, shell=True, stdout=subprocess.PIPE).stdout.readlines()
 for line in lines:
     match = re.search('\[(.*)\]', line.decode('utf-8'))
@@ -14,23 +15,28 @@ else:
 sys.path.append(script_dir)
 sys.path.append(script_dir + '/..')
 
-from util.base import * # pylint: disable=unused-wildcard-import
+from util.base import *  # pylint: disable=unused-wildcard-import
+
 
 class Aquarium(Program):
     def __init__(self):
         parser = argparse.ArgumentParser(description='aquarium')
-        parser.epilog='''
+        parser.epilog = '''
 examples:
 {0} {1} --roll
 {0} {1} --sync --build --run
-'''.format(Util.PYTHON, parser.prog)
+'''.format(
+            Util.PYTHON, parser.prog
+        )
 
         parser.add_argument('--sync', dest='sync', help='sync', action='store_true')
         parser.add_argument('--makefile', dest='makefile', help='makefile', action='store_true')
         parser.add_argument('--build', dest='build', help='build', action='store_true')
         parser.add_argument('--run', dest='run', help='run')
         parser.add_argument('--roll', dest='roll', help='roll', action='store_true')
-        parser.add_argument('--roll-update', dest='roll_update', help='update related repos before roll', action='store_true')
+        parser.add_argument(
+            '--roll-update', dest='roll_update', help='update related repos before roll', action='store_true'
+        )
 
         python_ver = Util.get_python_ver()
         if python_ver[0] == 3:
@@ -53,7 +59,18 @@ examples:
         # https://chromium.googlesource.com/chromium/src/third_party/markupsafe.git
         # https://chromium.googlesource.com/chromium/src/testing.git
         # https://chromium.googlesource.com/chromium/src/third_party/zlib.git
-        standalone_repos = ['build', 'buildtools', 'clang', 'googletest', 'jinja2', 'jsoncpp', 'libpng', 'markupsafe', 'testing', 'zlib']
+        standalone_repos = [
+            'build',
+            'buildtools',
+            'clang',
+            'googletest',
+            'jinja2',
+            'jsoncpp',
+            'libpng',
+            'markupsafe',
+            'testing',
+            'zlib',
+        ]
         for repo in standalone_repos:
             repo_dir = '%s/%s' % (Util.PROJECT_DIR, repo)
             if not os.path.exists(repo_dir):
@@ -70,7 +87,18 @@ examples:
                 key = '%s_revision' % repo
             repo_rev[key] = Util.get_working_dir_hash()
 
-        chromium_repos = ['angle_revision', 'catapult_revision', 'dawn_revision', 'googletest_revision', 'gn_version', 'jsoncpp_revision', 'libcxx_revision', 'libcxxabi_revision', 'libunwind_revision', 'swiftshader_revision']
+        chromium_repos = [
+            'angle_revision',
+            'catapult_revision',
+            'dawn_revision',
+            'googletest_revision',
+            'gn_version',
+            'jsoncpp_revision',
+            'libcxx_revision',
+            'libcxxabi_revision',
+            'libunwind_revision',
+            'swiftshader_revision',
+        ]
         chromium_dir = Util.PROJECT_CHROMIUM_DIR
         if self.args.roll_update:
             Util.chdir(chromium_dir)
@@ -116,7 +144,7 @@ examples:
                 if match:
                     repo_rev['vulkan_memory_allocator_revision'] = match.group(1)
 
-        #print(repo_rev)
+        # print(repo_rev)
 
         repos = repo_rev.keys()
         for line in fileinput.input('%s/DEPS' % self.root_dir, inplace=1):
@@ -172,6 +200,6 @@ examples:
         if args.run:
             self.run()
 
+
 if __name__ == '__main__':
     Aquarium()
-

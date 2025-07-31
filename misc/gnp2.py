@@ -7,7 +7,7 @@ import sys
 from util.base import *  # pylint: disable=unused-wildcard-import
 
 
-class Gnp2(Program2):
+class Gnp2(Program):
     BUILD_TARGET_DICT = {
         "angle": "angle_end2end_tests",
         "angle_perf": "angle_perftests",
@@ -40,7 +40,7 @@ class Gnp2(Program2):
         # handle repo chromium
         if project == "src":
             project = os.path.basename(os.path.dirname(root_dir))
-        if "chromium" in project or "chrome" in project or "cr" in project:
+        if "chromium" in project or "chrome" in project or "cr" in project or "edge" in project:
             project = "chromium"
         self.project = project
 
@@ -80,7 +80,10 @@ class Gnp2(Program2):
 
         self.exit_on_error = False
         self.root_dir = root_dir
-        Util.chdir(root_dir)
+        if project == "chromium":
+            Util.chdir(f"{root_dir}/src")
+        else:
+            Util.chdir(root_dir)
 
     def sync(self):
         self._execute("git pull --no-recurse-submodules", exit_on_error=self.exit_on_error)
@@ -171,13 +174,12 @@ class Gnp2(Program2):
     def build(self, target=None):
         if self.project == 'angle':
             cmd = f'autoninja angle_end2end_tests -C {self.out_dir}'
-            os.system(cmd)
         elif self.project == "chromium":
-            cmd = f'autoninja chrome chrome/test:telemetry_gpu_integration_test -C {self.out_dir}'
-            self._execute(cmd, show_duration=True)
+            # cmd = f'autoninja chrome chrome/test:telemetry_gpu_integration_test -C {self.out_dir}'
+            cmd = f'cd {self.out_dir} && autoninja chrome chrome/test:telemetry_gpu_integration_test'
         elif self.project == "dawn":
             cmd = f'autoninja dawn_end2end_tests -C {self.out_dir}'
-            os.system(cmd)
+        os.system(cmd)
 
     def backup(self, target, backup_inplace=False, backup_symbol=False):
         if self.project == "chromium":
@@ -344,31 +346,6 @@ class Gnp2(Program2):
             shutil.rmtree("out")
             Util.chdir(self.root_dir, verbose=True)
 
-    def upload(self):
-        rev = "latest"
-        rev_name, _ = Util.get_backup_dir(self.backup_dir, rev)
-        rev_dir = "%s/%s" % (self.backup_dir, rev_name)
-        if Util.HOST_OS == Util.LINUX:
-            rev_backup_file = "%s.tar.gz" % rev_dir
-            if not os.path.exists(rev_backup_file):
-                Util.chdir(self.backup_dir)
-                Util.execute("tar zcf %s.tar.gz %s" % (rev_name, rev_name))
-        elif Util.HOST_OS == Util.WINDOWS:
-            rev_backup_file = "%s.zip" % rev_dir
-            if not os.path.exists(rev_backup_file):
-                shutil.make_archive(rev_dir, "zip", rev_dir)
-
-        relative_path = (
-            self.root_dir[self.root_dir.index("project") + len("project") + 1 :].replace("\\", "/").replace("/src", "")
-        )
-        if Util.check_server_backup(relative_path, os.path.basename(rev_backup_file)):
-            Util.info("Server already has rev %s" % rev_backup_file)
-        else:
-            Util.execute(
-                "scp %s wp@%s:/workspace/backup/%s/%s/"
-                % (rev_backup_file, Util.BACKUP_SERVER, Util.HOST_OS, relative_path)
-            )
-
     def run(self, target, rev, result_file=None, backend=None, filter="all", run_dry=False, validation='disabled'):
         if target == 'angle':
             run_args = ""
@@ -413,71 +390,6 @@ class Gnp2(Program2):
             self._run(target, run_args)
 
         Util.chdir(self.root_dir, verbose=True)
-
-    def download(self):
-        if not self.project == "chromium":
-            return
-
-        rev = self.rev
-        if not rev:
-            Util.error("Please designate revision")
-
-        download_dir = "%s/%s-%s/tmp" % (
-            ScriptRepo.IGNORE_CHROMIUM_DOWNLOAD_DIR,
-            self.target_arch,
-            self.target_os,
-        )
-        Util.ensure_dir(download_dir)
-        Util.chdir(download_dir)
-
-        if self.target_os == Util.DARWIN:
-            target_arch_tmp = ""
-        elif self.target_arch == "x86_64":
-            target_arch_tmp = "_x64"
-        else:
-            target_arch_tmp = ""
-
-        if self.target_os == Util.WINDOWS:
-            target_os_tmp = "Win"
-            target_os_tmp2 = "win"
-        elif self.target_os == Util.DARWIN:
-            target_os_tmp = "Mac"
-            target_os_tmp2 = "mac"
-        else:
-            target_os_tmp = self.target_os.capitalize()
-            target_os_tmp2 = self.target_os
-
-        rev_zip = "%s.zip" % rev
-        if os.path.exists(rev_zip) and os.stat(rev_zip).st_size == 0:
-            Util.ensure_nofile(rev_zip)
-        if os.path.exists("../%s" % rev_zip):
-            Util.info("%s has been downloaded" % rev_zip)
-        else:
-            # linux64: Linux_x64/<rev>/chrome-linux.zip
-            # win64: Win_x64/<rev>/chrome-win32.zip
-            # mac64: Mac/<rev>/chrome-mac.zip
-            if self.target_os == Util.ANDROID:
-                # https://commondatastorage.googleapis.com/chromium-browser-snapshots/index.html?prefix=Android/
-                # https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/Android%2F607944%2Fchrome-android.zip?generation=1542192867201693&alt=media
-                archive_url = (
-                    '"https://www.googleapis.com/download/storage/v1/b/chromium-browser-snapshots/o/Android%2F'
-                    + rev
-                    + '%2Fchrome-android.zip?generation=1542192867201693&alt=media"'
-                )
-            else:
-                archive_url = (
-                    "http://commondatastorage.googleapis.com/chromium-browser-snapshots/%s%s/%s/chrome-%s.zip"
-                    % (target_os_tmp, target_arch_tmp, rev, target_os_tmp2)
-                )
-            self._execute(
-                "%s %s --show-progress -O %s" % (ScriptRepo.WGET_FILE, archive_url, rev_zip),
-                exit_on_error=self.exit_on_error,
-            )
-            if os.path.getsize(rev_zip) == 0:
-                Util.warning("Could not find revision %s" % rev)
-                self._execute("rm %s" % rev_zip, exit_on_error=self.exit_on_error)
-            else:
-                self._execute("mv %s ../" % rev_zip, exit_on_error=self.exit_on_error)
 
     def _execute_gclient(self, cmd_type, verbose=False):
         cmd = f"gclient {cmd_type} -j{Util.CPU_COUNT}"

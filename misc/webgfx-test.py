@@ -139,6 +139,7 @@ class WebgfxTest(Program):
 
         parser.add_argument("--batch", dest="batch", help="batch", action="store_true")
         parser.add_argument("--email", dest="email", help="email", action="store_true")
+        parser.add_argument("--browser-foler", dest="browser_foler", help="browser foler", default="cr")
 
         parser.epilog = """
 examples:
@@ -151,21 +152,10 @@ examples:
             Util.PYTHON, parser.prog
         )
 
-        python_ver = Util.get_python_ver()
-        if python_ver[0] == 3:
-            super().__init__(parser)
-        else:
-            super(ChromeDrop, self).__init__(parser)
-
+        super().__init__(parser)
         args = self.args
 
-        if args.disable_rbe:
-            self.rbe = False
-        else:
-            self.rbe = True
-        # Util.prepend_depot_tools_path(self.rbe)
-
-        self.browser_folder = "cr"
+        self.browser_folder = args.browser_foler
         # strip the ending "\"
         root_dir = self.root_dir.strip("\\")
         self.results_dir = f"{root_dir}/results/{self.timestamp}"
@@ -218,7 +208,10 @@ examples:
             Util.append_file(self.run_log, f"OS version{self.SEPARATOR}{os_ver}")
 
         for target in self.targets:
-            gnp = Gnp2(root_dir=f'{self.root_dir}/{target}')
+            if target in ['webgl', 'webgpu']:
+                gnp = Gnp2(root_dir=f'{self.root_dir}/{self.browser_folder}')
+            else:
+                gnp = Gnp2(root_dir=f'{self.root_dir}/{target}')
             if args.sync or args.batch:
                 gnp.sync()
             if args.makefile or args.batch:
@@ -235,14 +228,14 @@ examples:
 
     def run(self, gnp, target):
         if "angle" == target:
-            angle_dir = f"{self.root_dir}/{target}"
+            target_dir = f"{self.root_dir}/{target}"
             if self.run_rev == "out":
-                output_file = f"{angle_dir}/out/release_{self.target_cpu}/output.json"
-                # TestExpectation.update('angle_end2end_tests', f'{angle_dir}')
+                output_file = f"{target_dir}/out/release_{self.target_cpu}/output.json"
+                # TestExpectation.update('angle_end2end_tests', f'{target_dir}')
             else:
-                rev_name, _ = Util.get_backup_dir(f"{angle_dir}/backup", "latest")
-                output_file = f"{angle_dir}/backup/{rev_name}/out/release_{self.target_cpu}/output.json"
-                # TestExpectation.update("angle_end2end_tests", f"{angle_dir}/backup/{rev_name}")
+                rev_name, _ = Util.get_backup_dir(f"{target_dir}/backup", "latest")
+                output_file = f"{target_dir}/backup/{rev_name}/out/release_{self.target_cpu}/output.json"
+                # TestExpectation.update("angle_end2end_tests", f"{target_dir}/backup/{rev_name}")
 
             timer = Timer()
             gnp.run(target, rev=self.run_rev, run_dry=self.args.run_dry)
@@ -260,6 +253,7 @@ examples:
                 Util.append_file(self.run_log, f"ANGLE Rev{self.SEPARATOR}{rev_name}")
 
         if "dawn" == target:
+            target_dir = f"{self.root_dir}/{target}"
             all_backends = []
             if Util.HOST_OS == Util.WINDOWS:
                 all_backends = ["d3d12"]
@@ -281,21 +275,23 @@ examples:
             if self.run_rev == "out":
                 Util.append_file(self.run_log, f"Dawn Rev{self.SEPARATOR}out")
             else:
-                rev_name, _ = Util.get_backup_dir(f"{self.root_dir}/{target}/backup", "latest")
+                rev_name, _ = Util.get_backup_dir(f"{self.target_dir}/backup", "latest")
                 Util.append_file(self.run_log, f"Dawn Rev{self.SEPARATOR}{rev_name}")
 
         if "webgl" == target:
+            target_dir = f"{self.root_dir}/{self.browser_folder}"
+            target_backup_dir = f"{target_dir}/backup"
             common_cmd1 = "vpython3.bat content/test/gpu/run_gpu_integration_test.py"
             common_cmd2 = " --disable-log-uploads"
             if self.run_chrome_channel == "build":
                 self.chrome_rev = self.run_rev
                 if self.run_rev == "out":
-                    chrome_rev_dir = self.chrome_dir
+                    target_rev_dir = f"{target_dir}/src"
                 else:
-                    chrome_rev_dir, _ = Util.get_backup_dir(self.chrome_backup_dir, "latest")
-                    chrome_rev_dir = f"{self.chrome_backup_dir}/{chrome_rev_dir}"
-                Util.chdir(chrome_rev_dir, verbose=True)
-                Util.info(f"Use Chrome at {chrome_rev_dir}")
+                    target_rev_dir, _ = Util.get_backup_dir(target_backup_dir, "latest")
+                    target_rev_dir = f"{target_backup_dir}/{target_rev_dir}"
+                Util.chdir(target_rev_dir, verbose=True)
+                Util.info(f"Use Chrome at {target_rev_dir}")
 
                 if Util.HOST_OS == Util.WINDOWS:
                     chrome = f"out\\release_{self.target_cpu}\\chrome.exe"
@@ -308,7 +304,7 @@ examples:
                 common_cmd2 += f" --browser=release_{self.target_cpu}"
             else:
                 common_cmd2 += f" --browser={self.run_chrome_channel}"
-                Util.chdir(self.chrome_dir)
+                Util.chdir(target_dir)
                 self.chrome_rev = self.run_chrome_channel
                 if Util.HOST_OS == Util.DARWIN:
                     if self.run_chrome_channel == "canary":
@@ -374,9 +370,9 @@ examples:
             for comb in test_combs:
                 # Locally update related conformance_expectations.txt
                 if comb == "1.0.3":
-                    TestExpectation.update("webgl_cts_tests", chrome_rev_dir)
+                    TestExpectation.update("webgl_cts_tests", target_rev_dir)
                 elif comb == "2.0.1":
-                    TestExpectation.update("webgl2_cts_tests", chrome_rev_dir)
+                    TestExpectation.update("webgl2_cts_tests", target_rev_dir)
                 extra_browser_args = "--disable-backgrounding-occluded-windows"
                 if Util.HOST_OS == Util.LINUX and self.run_no_angle:
                     extra_browser_args += ",--use-gl=desktop"
@@ -400,22 +396,24 @@ examples:
             if self.run_rev == "out":
                 Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}out")
             else:
-                rev_name, _ = Util.get_backup_dir(f"{os.path.dirname(self.chrome_dir)}/backup", "latest")
+                rev_name, _ = Util.get_backup_dir(f"{os.path.dirname(chrome_dir)}/backup", "latest")
                 Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}{rev_name}")
 
         if "webgpu" == target:
+            target_dir = f"{self.root_dir}/{self.browser_folder}"
+            target_backup_dir = f"{target_dir}/../backup"
             cmd = "vpython3.bat content/test/gpu/run_gpu_integration_test.py webgpu_cts --passthrough --stable-jobs"
             cmd += " --disable-log-uploads"
             if self.run_chrome_channel == "build":
                 if self.run_rev == "out":
-                    chrome_rev_dir = self.chrome_dir
+                    target_rev_dir = f"{target_dir}/src"
                 else:
-                    chrome_rev_dir, _ = Util.get_backup_dir(self.chrome_backup_dir, "latest")
-                    chrome_rev_dir = f"{self.chrome_backup_dir}/{chrome_rev_dir}"
+                    target_rev_dir, _ = Util.get_backup_dir(target_backup_dir, "latest")
+                    target_rev_dir = f"{target_backup_dir}/{target_rev_dir}"
                     # Locally update expectations.txt and slow_tests.txt in webgpu_cts_tests
-                    TestExpectation.update("webgpu_cts_tests", chrome_rev_dir)
-                Util.chdir(chrome_rev_dir, verbose=True)
-                Util.info(f"Use Chrome at {chrome_rev_dir}")
+                    TestExpectation.update("webgpu_cts_tests", target_rev_dir)
+                Util.chdir(target_rev_dir, verbose=True)
+                Util.info(f"Use Chrome at {target_rev_dir}")
 
                 if Util.HOST_OS == Util.WINDOWS:
                     chrome = f"out\\release_{self.target_cpu}\\chrome.exe"
@@ -428,7 +426,7 @@ examples:
                 cmd += f" --browser=release_{self.target_cpu}"
             else:
                 cmd += f" --browser={self.run_chrome_channel}"
-                Util.chdir(self.chrome_dir)
+                Util.chdir(target_dir)
                 self.chrome_rev = self.run_chrome_channel
                 if Util.HOST_OS == Util.DARWIN:
                     if self.run_chrome_channel == "canary":
@@ -472,7 +470,7 @@ examples:
             if self.run_rev == "out":
                 Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}out")
             else:
-                rev_name, _ = Util.get_backup_dir(f"{os.path.dirname(self.chrome_dir)}/backup", "latest")
+                rev_name, _ = Util.get_backup_dir(f"{os.path.dirname(chrome_dir)}/backup", "latest")
                 Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}{rev_name}")
 
     def report(self):
