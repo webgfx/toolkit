@@ -32,10 +32,10 @@ sys.path.append(SCRIPT_DIR + "/..")
 
 from util.base import *
 from misc.testhelper import *
-from misc.gnp import Gnp
+from misc.project import Project
 
 
-class WebgfxTest(Program):
+class Webgfx(Program):
     SKIP_CASES = {
         # Util.LINUX: ['WebglConformance_conformance2_textures_misc_tex_3d_size_limit'],
         Util.LINUX: [],
@@ -43,7 +43,7 @@ class WebgfxTest(Program):
     SEPARATOR = "|"
 
     def __init__(self):
-        parser = argparse.ArgumentParser(description="Webgfx tests")
+        parser = argparse.ArgumentParser(description="webgfx")
 
         parser.add_argument("--target", dest="target", help="target", default="all")
         parser.add_argument("--sync", dest="sync", help="sync", action="store_true")
@@ -90,12 +90,6 @@ class WebgfxTest(Program):
             default="build",
         )
         parser.add_argument(
-            "--run-mesa-rev",
-            dest="run_mesa_rev",
-            help="mesa revision",
-            default="latest",
-        )
-        parser.add_argument(
             "--run-filter",
             dest="run_filter",
             help="WebGL CTS suite to run against",
@@ -114,9 +108,9 @@ class WebgfxTest(Program):
             default="disabled",
         )
         parser.add_argument(
-            "--run-target",
-            dest="run_target",
-            help='run target, split by comma, like "0,2"',
+            "--run-combo",
+            dest="run_combo",
+            help='run backend, split by comma, like "webgl,"',
             default="all",
         )
         parser.add_argument(
@@ -165,7 +159,7 @@ examples:
         self.run_chrome_channel = args.run_chrome_channel
         self.run_filter = args.run_filter
         self.run_verbose = args.run_verbose
-        self.run_target = args.run_target
+        self.run_combo = args.run_combo
         self.run_no_angle = args.run_no_angle
         self.run_rev = args.run_rev
         if self.run_rev == "default":
@@ -207,266 +201,48 @@ examples:
             os_ver = Util.get_os_info()
             Util.append_file(self.run_log, f"OS version{self.SEPARATOR}{os_ver}")
 
-        backup_chromium = False
+        has_chromium_backup = False
         for target in self.targets:
             if target in ['webgl', 'webgpu']:
-                gnp = Gnp(root_dir=f'{self.root_dir}/{self.browser_folder}')
+                project = Project(root_dir=f'{self.root_dir}/{self.browser_folder}', results_dir=self.results_dir)
             else:
-                gnp = Gnp(root_dir=f'{self.root_dir}/{target}')
+                project = Project(root_dir=f'{self.root_dir}/{target}', results_dir=self.results_dir)
 
             if args.sync or args.batch:
-                gnp.sync()
+                project.sync()
             if args.makefile or args.batch:
-                gnp.makefile()
+                project.makefile()
             if args.build or args.batch:
-                gnp.build(target)
+                project.build()
             if args.backup or args.batch:
-                if target in ['webgl', 'webgpu'] and backup_chromium:
+                if target in ['webgl', 'webgpu'] and has_chromium_backup:
                     continue
-                gnp.backup(["chrome", target])
-                # gnp.backup(["chrome"])
                 if target in ['webgl', 'webgpu']:
-                    backup_chromium = True
+                    project.backup(["chrome", target])
+                else:
+                    project.backup([target])
+                if target in ['webgl', 'webgpu']:
+                    has_chromium_backup = True
             if args.run or args.batch:
-                self.run(gnp, target)
+                self.run(project, target)
 
         if args.run or args.batch or args.report:
             self.report()
 
-    def run(self, gnp, target):
-        target_dir = f"{self.root_dir}/{target}"
-        target_backup_dir = f"{target_dir}/backup"
-        if "angle" == target:
-            if self.run_rev == "out":
-                output_file = f"{target_dir}/out/release_{self.target_cpu}/output.json"
-                # TestExpectation.update('angle_end2end_tests', f'{target_dir}')
-            else:
-                target_rev_name, _ = Util.get_backup_dir(f"{target_dir}/backup", "latest")
-                output_file = f"{target_backup_dir}/{target_rev_name}/out/release_{self.target_cpu}/output.json"
-                # TestExpectation.update("angle_end2end_tests", f"{target_dir}/backup/{target_rev_dir}")
+    def run(self, project, target):
+        if self.run_combo == "all":
+            combos = []
+        else:
+            combos = self.run_combo.split(",")
 
-            timer = Timer()
-            gnp.run(target, rev=self.run_rev, run_dry=self.args.run_dry)
-            Util.append_file(self.run_log, f"ANGLE Run: {timer.stop()}")
-
-            result_file = f"{self.results_dir}/angle.json"
-            if os.path.exists(output_file):
-                shutil.move(output_file, result_file)
-            else:
-                Util.ensure_file(result_file)
-
-            if self.run_rev == "out":
-                Util.append_file(self.run_log, f"ANGLE Rev{self.SEPARATOR}out")
-            else:
-                Util.append_file(self.run_log, f"ANGLE Rev{self.SEPARATOR}{target_rev_dir}")
-
-        if "dawn" == target:
-            all_backends = []
-            if Util.HOST_OS == Util.WINDOWS:
-                all_backends = ["d3d12"]
-            elif Util.HOST_OS == Util.LINUX:
-                all_backends = ["vulkan"]
-            test_backends = []
-            if self.run_target == "all":
-                test_backends = all_backends
-            else:
-                for i in self.run_target.split(","):
-                    test_backends.append(all_backends[int(i)])
-
-            for backend in test_backends:
-                result_file = f"{self.results_dir}/dawn-{backend}.json"
-                timer = Timer()
-                gnp.run(target, rev=self.run_rev, result_file=result_file, backend=backend, run_dry=self.args.run_dry)
-                Util.append_file(self.run_log, f"Dawn-{backend} run: {timer.stop()}")
-
-            if self.run_rev == "out":
-                Util.append_file(self.run_log, f"Dawn Rev{self.SEPARATOR}out")
-            else:
-                target_rev_dir, _ = Util.get_backup_dir(target_backup_dir, "latest")
-                Util.append_file(self.run_log, f"Dawn Rev{self.SEPARATOR}{target_rev_dir}")
-
-        if "webgl" == target:
-            target_dir = f"{self.root_dir}/{self.browser_folder}"
-            target_backup_dir = f"{target_dir}/backup"
-            common_cmd1 = "vpython3.bat content/test/gpu/run_gpu_integration_test.py"
-            common_cmd2 = " --disable-log-uploads"
-            if self.run_chrome_channel == "build":
-                self.chrome_rev = self.run_rev
-                if self.run_rev == "out":
-                    target_rev_dir = f"{target_dir}/src"
-                else:
-                    target_rev_name, _ = Util.get_backup_dir(target_backup_dir, "latest")
-                    target_rev_dir = f"{target_backup_dir}/{target_rev_name}"
-                Util.chdir(target_rev_dir, verbose=True)
-                Util.info(f"Use Chrome at {target_rev_dir}")
-
-                if Util.HOST_OS == Util.WINDOWS:
-                    chrome = f"out\\release_{self.target_cpu}\\chrome.exe"
-                else:
-                    if os.path.exists(f"out/release_{self.target_cpu}/chrome"):
-                        chrome = f"out/release_{self.target_cpu}/chrome"
-                    else:
-                        chrome = "out/Default/chrome"
-
-                common_cmd2 += f" --browser=release_{self.target_cpu}"
-            else:
-                common_cmd2 += f" --browser={self.run_chrome_channel}"
-                Util.chdir(target_dir)
-                self.chrome_rev = self.run_chrome_channel
-                if Util.HOST_OS == Util.DARWIN:
-                    if self.run_chrome_channel == "canary":
-                        chrome = '"/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"'
-                    else:
-                        Util.error("run_chrome_channel is not supported")
-                elif Util.HOST_OS == Util.LINUX:
-                    if self.run_chrome_channel == "canary":
-                        chrome = "/usr/bin/google-chrome-unstable"
-                    elif self.run_chrome_channel == "stable":
-                        chrome = "/usr/bin/google-chrome-stable"
-                    else:
-                        Util.error("run_chrome_channel is not supported")
-                else:
-                    Util.error("run_chrome_channel is not supported")
-
-            if self.run_filter != "all":
-                common_cmd2 += f" --test-filter=*{self.run_filter}*"
-            if self.args.run_dry:
-                # common_cmd2 += ' --test-filter=*copy-texture-image-same-texture*::*ext-texture-norm16*'
-                common_cmd2 += " --test-filter=*conformance/attribs*"
-
-            if Util.HOST_OS in self.SKIP_CASES:
-                skip_filter = self.SKIP_CASES[Util.HOST_OS]
-                for skip_tmp in skip_filter:
-                    common_cmd2 += f" --skip={skip_tmp}"
-            if self.run_verbose:
-                common_cmd2 += " --verbose"
-
-            common_cmd2 += f" --jobs={self.run_jobs}"
-
-            Util.ensure_dir(self.results_dir)
-
-            COMB_INDEX_WEBGL = 0
-            COMB_INDEX_BACKEND = 1
-            if Util.HOST_OS in [Util.LINUX, Util.DARWIN]:
-                all_combs = ["2.0.1"]
-            elif Util.HOST_OS == Util.WINDOWS:
-                all_combs = ["1.0.3", "2.0.1"]
-
-            test_combs = []
-            if self.run_target == "all":
-                test_combs = all_combs
-            else:
-                for i in self.run_target.split(","):
-                    test_combs.append(all_combs[int(i)])
-
-            if self.args.run_warp:
-                use_angle = "d3d11-warp"
-            else:
-                use_angle = "d3d11"
-
-            for comb in test_combs:
-                # Locally update related conformance_expectations.txt
-                if comb == "1.0.3":
-                    TestExpectation.update("webgl_cts_tests", target_rev_dir)
-                elif comb == "2.0.1":
-                    TestExpectation.update("webgl2_cts_tests", target_rev_dir)
-                extra_browser_args = "--disable-backgrounding-occluded-windows --no-sandbox"
-                if Util.HOST_OS == Util.LINUX and self.run_no_angle:
-                    extra_browser_args += ",--use-gl=desktop"
-                cmd = common_cmd1 + f" webgl{comb[0]}_conformance {common_cmd2} --webgl-conformance-version={comb}"
-                result_file = ""
-                if Util.HOST_OS == Util.LINUX:
-                    result_file = f"{self.results_dir}/webgl-{comb}.log"
-                elif Util.HOST_OS == Util.WINDOWS:
-                    extra_browser_args += f" --use-angle={use_angle}"
-                    result_file = f"{self.results_dir}/webgl-{comb}-{use_angle}.log"
-
-                if self.args.run_warp:
-                    extra_browser_args += " --enable-features=AllowD3D11WarpFallback --disable-gpu"
-                if extra_browser_args:
-                    cmd += f' --extra-browser-args="{extra_browser_args}"'
-                cmd += f" --write-full-results-to {result_file}"
-                timer = Timer()
-                self._execute(cmd, exit_on_error=False, show_duration=True)
-                Util.append_file(self.run_log, f"WebGL {comb} run: {timer.stop()}")
-
-            if self.run_rev == "out":
-                Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}out")
-            else:
-                Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}{target_rev_dir}")
-
-        if "webgpu" == target:
-            target_dir = f"{self.root_dir}/{self.browser_folder}"
-            target_backup_dir = f"{target_dir}/backup"
-            cmd = "vpython3.bat content/test/gpu/run_gpu_integration_test.py webgpu_cts --passthrough --stable-jobs"
-            cmd += " --disable-log-uploads"
-            if self.run_chrome_channel == "build":
-                if self.run_rev == "out":
-                    target_rev_dir = f"{target_dir}/src"
-                else:
-                    target_rev_name, _ = Util.get_backup_dir(target_backup_dir, "latest")
-                    target_rev_dir = f"{target_backup_dir}/{target_rev_name}"
-                    # Locally update expectations.txt and slow_tests.txt in webgpu_cts_tests
-                    TestExpectation.update("webgpu_cts_tests", target_rev_dir)
-                Util.chdir(target_rev_dir, verbose=True)
-                Util.info(f"Use Chrome at {target_rev_dir}")
-
-                if Util.HOST_OS == Util.WINDOWS:
-                    chrome = f"out\\release_{self.target_cpu}\\chrome.exe"
-                else:
-                    if os.path.exists(f"out/release_{self.target_cpu}/chrome"):
-                        chrome = f"out/release_{self.target_cpu}/chrome"
-                    else:
-                        chrome = "out/Default/chrome"
-
-                cmd += f" --browser=release_{self.target_cpu}"
-            else:
-                cmd += f" --browser={self.run_chrome_channel}"
-                Util.chdir(target_dir)
-                self.chrome_rev = self.run_chrome_channel
-                if Util.HOST_OS == Util.DARWIN:
-                    if self.run_chrome_channel == "canary":
-                        chrome = '"/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary"'
-                    else:
-                        Util.error("run_chrome_channel is not supported")
-                elif Util.HOST_OS == Util.LINUX:
-                    if self.run_chrome_channel == "canary":
-                        chrome = "/usr/bin/google-chrome-unstable"
-                    elif self.run_chrome_channel == "stable":
-                        chrome = "/usr/bin/google-chrome-stable"
-                    else:
-                        Util.error("run_chrome_channel is not supported")
-                else:
-                    Util.error("run_chrome_channel is not supported")
-
-            if self.run_filter != "all":
-                cmd += f" --test-filter=*{self.run_filter}*"
-            if self.args.run_dry:
-                cmd += (
-                    " --test-filter=*webgpu:api,operation,render_pipeline,pipeline_output_targets:color,attachments:*"
-                )
-
-            if self.run_verbose:
-                cmd += " --verbose"
-
-            cmd += f" --jobs={self.run_jobs}"
-
-            Util.ensure_dir(self.results_dir)
-
-            extra_browser_args = "--js-flags=--expose-gc --force_high_performance_gpu --no-sandbox"
-            result_file = f"{self.results_dir}/webgpu.log"
-
-            if extra_browser_args:
-                cmd += f' --extra-browser-args="{extra_browser_args}"'
-            cmd += f" --write-full-results-to {result_file}"
-            timer = Timer()
-            self._execute(cmd, exit_on_error=False, show_duration=True)
-            Util.append_file(self.run_log, f"WebGPU run: {timer.stop()}")
-
-            if self.run_rev == "out":
-                Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}out")
-            else:
-                Util.append_file(self.run_log, f"Chrome Rev{self.SEPARATOR}{target_rev_name}")
+        project.run(
+            target=target,
+            combos=combos,
+            rev=self.run_rev,
+            run_dry=self.args.run_dry,
+            filter=self.run_filter,
+            validation=self.args.run_dawn_validation,
+        )
 
     def report(self):
         if self.args.report:
@@ -511,4 +287,4 @@ examples:
 
 
 if __name__ == "__main__":
-    WebgfxTest()
+    Webgfx()

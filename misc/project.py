@@ -7,7 +7,9 @@ import sys
 from util.base import *  # pylint: disable=unused-wildcard-import
 
 
-class Gnp(Program):
+class Project(Program):
+    # angle == angle_e2e
+    # dawn == dawn_e2e
     BUILD_TARGET_DICT = {
         "angle": "angle_end2end_tests",
         "angle_perf": "angle_perftests",
@@ -33,11 +35,10 @@ class Gnp(Program):
         "webgpu": "//chrome/test:telemetry_gpu_integration_test",
     }
 
-    def __init__(self, root_dir, is_debug=False, symbol_level=-1):
+    def __init__(self, root_dir, results_dir, is_debug=False):
         super().__init__()
-
         project = os.path.basename(root_dir)
-        # handle repo chromium
+        # handle project chromium
         if "chromium" in project or "chrome" in project or "cr" in project or "edge" in project:
             project = "chromium"
         self.project = project
@@ -54,49 +55,42 @@ class Gnp(Program):
             build_type = "release"
         self.build_type = build_type
 
-        if symbol_level == -1:
-            if is_debug:
-                symbol_level = 2
-            else:
-                symbol_level = 0
-        self.symbol_level = symbol_level
-
+        self.is_debug = is_debug
         self.out_dir = f"out/{self.build_type}_{self.target_cpu}"
-
-        if self.project == "angle":
-            default_target = "angle"
-        elif self.project == "chromium":
-            if self.target_os == "android":
-                default_target = "chrome_public_apk"
-            else:
-                default_target = "chrome"
-        elif self.project == "dawn":
-            default_target = "dawn"
-        else:
-            default_target = ""
-        self.default_target = default_target
-
         self.exit_on_error = False
         self.root_dir = root_dir
+        self.results_dir = results_dir
+        self.run_log = f"{self.results_dir}/run.log"
+
         if project == "chromium":
             Util.chdir(f"{root_dir}/src")
         else:
             Util.chdir(root_dir)
 
-    def sync(self):
+    def sync(self, verbose=False):
         self._execute("git pull --no-recurse-submodules", exit_on_error=self.exit_on_error)
-        self._execute_gclient(cmd_type="sync")
+        cmd = f"gclient sync -j{Util.CPU_COUNT}"
+        if verbose:
+            cmd += " -v"
+        self._execute(cmd=cmd, exit_on_error=self.exit_on_error)
 
     def makefile(
         self,
-        is_debug=False,
         dcheck=True,
         is_component_build=False,
         treat_warning_as_error=True,
         disable_official_build=False,
         vulkan_only=False,
         target_os=Util.HOST_OS,
+        symbol_level=-1,
     ):
+        if symbol_level == -1:
+            if self.is_debug:
+                symbol_level = 2
+            else:
+                symbol_level = 0
+        self.symbol_level = symbol_level
+
         if self.project == 'chromium':
             cmd = f'autogn {self.target_cpu} {self.build_type} --use-remoteexec -a {self.root_dir}'
             print(cmd)
@@ -104,7 +98,7 @@ class Gnp(Program):
             return
 
         gn_args = "use_remoteexec=true"
-        if is_debug:
+        if self.is_debug:
             gn_args += " is_debug=true"
         else:
             gn_args += " is_debug=false"
@@ -168,13 +162,16 @@ class Gnp(Program):
         Util.info(cmd)
         os.system(cmd)
 
-    def build(self, target=None):
+    def build(self):
         if self.project == 'angle':
             cmd = f'autoninja angle_end2end_tests -C {self.out_dir}'
         elif self.project == "chromium":
             cmd = f'autoninja chrome chrome/test:telemetry_gpu_integration_test -C {self.out_dir}'
         elif self.project == "dawn":
             cmd = f'autoninja dawn_end2end_tests -C {self.out_dir}'
+        else:
+            cmd = ''
+            Util.impossible()
         os.system(cmd)
 
     def backup(self, targets, backup_inplace=False, backup_symbol=False):
@@ -193,21 +190,21 @@ class Gnp(Program):
 
         tmp_files = []
         for target in targets:
-            build_target = target
-            if build_target in self.BACKUP_TARGET_DICT.keys():
-                build_target = self.BACKUP_TARGET_DICT[build_target]
+            backup_target = target
+            if backup_target in self.BACKUP_TARGET_DICT.keys():
+                backup_target = self.BACKUP_TARGET_DICT[backup_target]
 
             if target.startswith("angle"):
-                build_target = f"//src/tests:{target}"
+                backup_target = f"//src/tests:{backup_target}"
             elif target.startswith("dawn"):
                 if self.project == "chromium":
-                    build_target = f"//third_party/dawn/src/dawn/tests:{target}"
+                    backup_target = f"//third_party/dawn/src/dawn/tests:{backup_target}"
                 else:
-                    build_target = f"//src/dawn/tests:{target}"
+                    backup_target = f"//src/dawn/tests:{backup_target}"
 
             target_files = (
                 self._execute(
-                    f"gn desc {self.out_dir} {build_target} runtime_deps",
+                    f"gn desc {self.out_dir} {backup_target} runtime_deps",
                     exit_on_error=self.exit_on_error,
                     return_out=True,
                 )[1]
@@ -216,10 +213,31 @@ class Gnp(Program):
             )
             tmp_files = Util.union_list(tmp_files, target_files)
 
-        # 'gen/', 'obj/', '../../testing/test_env.py', '../../testing/location_tags.json', '../../.vpython'
         exclude_files = []
+        if 'angle' in targets:
+            exclude_files.extend(
+                [
+                    "gen/third_party/devtools-frontend/src/front_end",
+                    "gen/third_party/devtools-frontend/src/inspector_overlay",
+                    "pyproto/google/protobuf",
+                    "locales",
+                    'bin',
+                    'dbgcore.dll',
+                    'dbghelp.dll',
+                    'libGLESv2_vulkan_secondaries.dll',
+                    '../../.vpython3',
+                    '../../build',
+                    '../../testing',
+                    '../../src/tests/py_utils',
+                    '../../infra',
+                    # swiftshader specific
+                    'vk_swiftshader.dll',
+                    'vk_swiftshader_icd.json',
+                    # vulkan specific
+                ]
+            )
+
         if 'chrome' in targets:
-            # Exclude files that are not needed for backup
             exclude_files.extend(
                 [
                     "gen/third_party/devtools-frontend/src/front_end",
@@ -230,7 +248,6 @@ class Gnp(Program):
             )
 
         if 'dawn' in targets:
-            # Even if we don't build them, they still show up from gn desc. So we need to remove them manually.
             exclude_files.extend(
                 [
                     "../..",
@@ -273,10 +290,16 @@ class Gnp(Program):
             else:
                 src_files.append(f"{self.out_dir}/{tmp_file}")
 
+        # print(src_files)
+        # exit(0)
+        # Add extra files
+        src_files += [
+            # f"{self.out_dir}/args.gn",
+        ]
+
         if "angle" in targets:
             src_files += [
-                f"{self.out_dir}/args.gn",
-                f"{self.out_dir}/../../infra/specs/angle.json",
+                # f"{self.out_dir}/../../infra/specs/angle.json",
             ]
 
         if "chrome" in targets:
@@ -286,18 +309,17 @@ class Gnp(Program):
                 f"{self.out_dir}/pyproto/google/protobuf",
                 f"{self.out_dir}/locales/*.pak",
                 # extra files
-                f"{self.out_dir}/args.gn",
             ]
-            if Util.HOST_OS == Util.WINDOWS:
-                src_files += [
-                    "infra/config/generated/builders/try/dawn-win10-x64-deps-rel/targets/chromium.dawn.json",
-                    "infra/config/generated/builders/try/gpu-fyi-try-win10-intel-rel-64/targets/chromium.gpu.fyi.json",
-                ]
-            elif Util.HOST_OS == Util.LINUX:
-                src_files += [
-                    "infra/config/generated/builders/try/dawn-linux-x64-deps-rel/targets/chromium.dawn.json",
-                    "infra/config/generated/builders/try/gpu-fyi-try-linux-intel-rel/targets/chromium.gpu.fyi.json",
-                ]
+            # if Util.HOST_OS == Util.WINDOWS:
+            #    src_files += [
+            #        "infra/config/generated/builders/try/dawn-win10-x64-deps-rel/targets/chromium.dawn.json",
+            #        "infra/config/generated/builders/try/gpu-fyi-try-win10-intel-rel-64/targets/chromium.gpu.fyi.json",
+            #    ]
+            # elif Util.HOST_OS == Util.LINUX:
+            #    src_files += [
+            #        "infra/config/generated/builders/try/dawn-linux-x64-deps-rel/targets/chromium.dawn.json",
+            #        "infra/config/generated/builders/try/gpu-fyi-try-linux-intel-rel/targets/chromium.gpu.fyi.json",
+            #    ]
 
         if "webgl" in targets or "webgpu" in targets:
             src_files += [
@@ -313,6 +335,7 @@ class Gnp(Program):
                 Util.info(f"[{index + 1}/{src_file_count}] skip {dst_file}")
                 continue
 
+            print(dst_file)
             Util.ensure_dir(os.path.dirname(dst_file))
             if os.path.isdir(src_file) or '*' in src_file:
                 dst_file = os.path.dirname(dst_file.rstrip("/"))
@@ -334,99 +357,149 @@ class Gnp(Program):
             # permission denied
             # shutil.copyfile(file, dst_dir)
 
+        # Postprocess the backup
         if self.project == 'dawn':
             Util.chdir(backup_path)
             Util.copy_files(self.out_dir, ".")
             shutil.rmtree("out")
             Util.chdir(self.root_dir, verbose=True)
 
-    def run(self, target, rev, result_file=None, backend=None, filter="all", run_dry=False, validation='disabled'):
-        if target == 'angle':
-            run_args = ""
-            if run_dry:
-                run_args = "--gtest_filter=*AlphaFuncTest*"
-            elif filter != "all":
-                run_args = f"--gtest_filter=*{filter}*"
-            elif Util.HOST_OS == Util.WINDOWS:
-                run_args = "--gtest_filter=*D3D11*"
-            else:
-                run_args = ""
-
-        elif target == 'dawn':
-            run_args = f" --gtest_output=json:{result_file}"
-            if run_dry:
-                run_args += " --gtest_filter=*BindGroupTests*"
-            elif filter != "all":
-                run_args += f" --gtest_filter=*{filter}*"
-            run_args += f" --enable-backend-validation={validation}"
-            run_args += f" --backend={backend}"
-
+    def run(self, target, combos, rev, run_dry=False, filter="all", validation='disabled', jobs=1):
+        project_dir = self.root_dir
+        project_backup_dir = f"{project_dir}/backup"
         if rev == "out":
-            run_dir = self.out_dir
-        else:
-            rev_name, _ = Util.get_backup_dir("backup", "latest")
-            if target == "dawn":
-                run_dir = f"backup/{rev_name}"
+            if target in ["angle", "dawn"]:
+                project_rev_dir = project_dir
             else:
-                run_dir = f"backup/{rev_name}/{self.out_dir}"
-
-        Util.chdir(run_dir, verbose=True)
-        if target:
-            targets = target.split(",")
+                project_rev_dir = f"{project_dir}/src"
         else:
-            targets = [self.default_target]
+            project_rev_name, _ = Util.get_backup_dir(project_backup_dir, "latest")
+            project_rev_dir = f"{project_backup_dir}/{project_rev_name}"
+            # TestExpectation.update("webgpu_cts_tests", target_rev_dir)
 
-        for key, value in self.BUILD_TARGET_DICT.items():
-            if key in targets:
-                targets[targets.index(key)] = value
-
-        for target in targets:
-            self._run(target, run_args)
-
-        Util.chdir(self.root_dir, verbose=True)
-
-    def _execute_gclient(self, cmd_type, verbose=False):
-        cmd = f"gclient {cmd_type} -j{Util.CPU_COUNT}"
-        if verbose:
-            cmd += " -v"
-        self._execute(cmd=cmd, exit_on_error=self.exit_on_error)
-
-    def _run(self, target, run_args):
-        if target == "telemetry_gpu_integration_test":
-            cmd = f"vpython3.bat ../../content/test/gpu/run_gpu_integration_test.py"
-        elif target == "webgpu_blink_web_tests":
-            cmd = "bin/run_webgpu_blink_web_tests"
+        if target == "webgl":
             if Util.HOST_OS == Util.WINDOWS:
-                cmd += ".bat"
-                # Workaround for content shell crash on Windows when building webgpu_blink_web_tests with is_official_build which is configured in makefile().
-                # cmd += ' --additional-driver-flag=--disable-gpu-sandbox'
-        else:
-            cmd = "%s/%s%s" % (os.getcwd(), target, Util.EXEC_SUFFIX)
-        if Util.HOST_OS == Util.WINDOWS:
-            cmd = Util.format_slash(cmd)
+                all_combos = ["1.0.3", "2.0.1"]
+            elif Util.HOST_OS in [Util.LINUX, Util.DARWIN]:
+                all_combos = ["2.0.1"]
+        elif target == "webgpu":
+            all_combos = ["d3d12"]
+        elif target == 'angle':
+            all_combos = ["d3d11"]
+        elif target == 'dawn':
+            all_combos = ["d3d12"]
 
-        if run_args:
-            cmd += f' {run_args}'
+        if combos == []:
+            combos = [i for i in range(len(all_combos))]
 
-        if Util.HOST_OS == Util.LINUX:
-            if target == "telemetry_gpu_integration_test":
-                cmd += " --browser=exact --browser-executable=./chrome"
-            if target not in [
-                "telemetry_gpu_integration_test",
-                "webgpu_blink_web_tests",
-            ]:
-                cmd = "./" + cmd
+        for index in combos:
+            combo = all_combos[index]
+            # Prepare the cmd
+            run_args = ""
+            if target in ['angle', 'dawn']:
+                if run_dry:
+                    if target == 'angle':
+                        run_args = "--gtest_filter=*AlphaFuncTest*D3D11*"
+                    elif target == 'dawn':
+                        run_args = "--gtest_filter=*BindGroupTests*"
+                elif filter != "all":
+                    run_args = f"--gtest_filter=*{filter}*"
+                elif Util.HOST_OS == Util.WINDOWS:
+                    if target == 'angle':
+                        run_args = "--gtest_filter=*D3D11*:-*SwiftShader*"
 
-        if target in ["angle_end2end_tests", "angle_white_box_tests"]:
-            if "test-launcher-bot-mode" not in cmd:
-                cmd += " --test-launcher-bot-mode"
+                if target == "angle":
+                    run_args += " --test-launcher-bot-mode"
 
-        if self.project == "dawn":
-            if "exclusive-device-type-preference" not in cmd:
-                cmd += " --exclusive-device-type-preference=discrete,integrated"
-            if Util.HOST_OS == Util.LINUX:
-                cmd += " --backend=vulkan"
-            # cmd += ' --run-suppressed-tests'
-            # for output, Chrome build uses --gtest_output=json:%s, standalone build uses --test-launcher-summary-output=%s
+                if target == 'dawn':
+                    result_file = f"{self.results_dir}/{target}-{combo}.json"
+                    run_args += f" --gtest_output=json:{result_file} --enable-backend-validation={validation} --backend={combo} --exclusive-device-type-preference=discrete,integrated"
+                    # cmd += ' --run-suppressed-tests'
+                    # for output, Chrome build uses --gtest_output=json:%s, standalone build uses --test-launcher-summary-output=%s
 
-        self._execute(cmd, exit_on_error=self.exit_on_error)
+                if target in self.BUILD_TARGET_DICT.keys():
+                    cmd = self.BUILD_TARGET_DICT[target]
+                else:
+                    cmd = target
+
+                if run_args:
+                    cmd += f' {run_args}'
+
+            elif target in ["webgl", "webgpu"]:
+                # Locally update related conformance_expectations.txt
+                # if combo == "1.0.3":
+                #    TestExpectation.update("webgl_cts_tests", target_rev_dir)
+                # elif combo == "2.0.1":
+                #    TestExpectation.update("webgl2_cts_tests", target_rev_dir)
+
+                run_args = "--disable-log-uploads"
+                if rev in ["out", "backup"]:
+                    Util.chdir(project_rev_dir, verbose=True)
+                    run_args += f" --browser=release_{self.target_cpu}"
+                else:
+                    run_args += f" --browser={rev}"
+
+                if run_dry:
+                    # run_args += ' --test-filter=*copy-texture-image-same-texture*::*ext-texture-norm16*'
+                    if target == "webgl":
+                        run_args += " --test-filter=*conformance/attribs*"
+                    elif target == "webgpu":
+                        run_args += " --test-filter=*webgpu:api,operation,render_pipeline,pipeline_output_targets:color,attachments:*"
+                elif filter != "all":
+                    run_args += f" --test-filter=*{filter}*"
+
+                # if self.run_verbose:
+                #    run_args += " --verbose"
+
+                run_args += f" --jobs={jobs}"
+                cmd = "vpython3.bat content/test/gpu/run_gpu_integration_test.py"
+                if target == "webgl":
+                    cmd += f" webgl{combo[0]}_conformance {run_args} --webgl-conformance-version={combo}"
+                elif target == "webgpu":
+                    cmd += f" webgpu_cts --passthrough --stable-jobs {run_args}"
+                result_file = ""
+                extra_browser_args = "--disable-backgrounding-occluded-windows --js-flags=--expose-gc --force_high_performance_gpu --no-sandbox"
+                if Util.HOST_OS == Util.LINUX:
+                    result_file = f"{self.results_dir}/{target}-{combo}.log"
+                elif Util.HOST_OS == Util.WINDOWS:
+                    if target == "webgl":
+                        extra_browser_args += f" --use-angle=d3d11"
+                    result_file = f"{self.results_dir}/{target}-{combo}.log"
+                # warp
+                # extra_browser_args += " --enable-features=AllowD3D11WarpFallback --disable-gpu"
+                cmd += f' --extra-browser-args="{extra_browser_args}"'
+                cmd += f" --write-full-results-to {result_file}"
+
+            # Run a combo
+            if target == "angle":
+                run_dir = f"{project_rev_dir}/{self.out_dir}"
+            else:
+                run_dir = project_rev_dir
+            Util.chdir(run_dir, verbose=True)
+
+            timer = Timer()
+            Util.info(cmd)
+            os.system(cmd)
+            Util.append_file(self.run_log, f"{target}-{combo} run: {timer.stop()}")
+
+            # Postprocess the result
+            if target == "angle":
+                if rev == "out":
+                    output_file = f"{project_dir}/out/release_{self.target_cpu}/output.json"
+                    # TestExpectation.update('angle_end2end_tests', f'{project_dir}')
+                else:
+                    output_file = f"{project_backup_dir}/{project_rev_name}/out/release_{self.target_cpu}/output.json"
+                    # TestExpectation.update("angle_end2end_tests", f"{project_dir}/backup/{project_rev_dir}")
+
+                result_file = f"{self.results_dir}/{target}-{combo}.json"
+                if os.path.exists(output_file):
+                    shutil.move(output_file, result_file)
+                else:
+                    Util.ensure_file(result_file)
+
+            if rev == "out":
+                Util.append_file(self.run_log, f"{target} rev: out")
+            else:
+                Util.append_file(self.run_log, f"{target} rev: {project_rev_name}")
+
+            Util.chdir(self.root_dir, verbose=True)
