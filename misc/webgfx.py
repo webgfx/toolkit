@@ -78,12 +78,6 @@ class Webgfx(Program):
             default="default",
         )
         parser.add_argument(
-            "--run-angle-rev",
-            dest="test_angle_rev",
-            help="ANGLE revision",
-            default="latest",
-        )
-        parser.add_argument(
             "--run-chrome-channel",
             dest="run_chrome_channel",
             help="run chrome channel",
@@ -94,7 +88,7 @@ class Webgfx(Program):
             dest="run_filter",
             help="WebGL CTS suite to run against",
             default="all",
-        )  # For smoke run, we may use conformance/attribs
+        )
         parser.add_argument(
             "--run-verbose",
             dest="run_verbose",
@@ -121,7 +115,7 @@ class Webgfx(Program):
         )
         parser.add_argument("--run-jobs", dest="run_jobs", help="run jobs", default=0)
         parser.add_argument("--run-dry", dest="run_dry", help="dry run", action="store_true")
-        parser.add_argument("--run-manual", dest="run_manual", help="run manual", action="store_true")
+
         parser.add_argument("--report", dest="report", help="report")
         parser.add_argument(
             "--report-max-fail",
@@ -141,7 +135,7 @@ examples:
 {0} {1} --batch --target angle
 {0} {1} --batch --target dawn
 {0} {1} --target angle --run --run-filter EXTBlendFuncExtendedDrawTest
-{0} {1} --target webgl --run --run-webgl-target 2
+{0} {1} --target webgl --run --run-combo 2
 """.format(
             Util.PYTHON, parser.prog
         )
@@ -213,14 +207,11 @@ examples:
             if args.makefile or args.batch:
                 project.makefile()
             if args.build or args.batch:
-                project.build()
+                project.build(target)
             if args.backup or args.batch:
                 if target in ['webgl', 'webgpu'] and has_chromium_backup:
                     continue
-                if target in ['webgl', 'webgpu']:
-                    project.backup(["chrome", target])
-                else:
-                    project.backup([target])
+                project.backup([target])
                 if target in ['webgl', 'webgpu']:
                     has_chromium_backup = True
             if args.run or args.batch:
@@ -242,6 +233,7 @@ examples:
             run_dry=self.args.run_dry,
             filter=self.run_filter,
             validation=self.args.run_dawn_validation,
+            jobs=self.run_jobs,
         )
 
     def report(self):

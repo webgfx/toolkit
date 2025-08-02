@@ -25,10 +25,8 @@ class Project(Program):
         "angle_unit": "angle_unittests",
         "dawn": "dawn_end2end_tests",
         "chrome": "//chrome:chrome",
-        "chromedriver": "//chrome/test/chromedriver:chromedriver",
         "gl_tests": "//gpu:gl_tests",
         "vulkan_tests": "//gpu/vulkan:vulkan_tests",
-        "telemetry_gpu_integration_test": "//chrome/test:telemetry_gpu_integration_test",
         "webgpu_blink_web_tests": "//:webgpu_blink_web_tests",
         # For chrome drop
         "webgl": "//chrome/test:telemetry_gpu_integration_test",
@@ -84,18 +82,17 @@ class Project(Program):
         target_os=Util.HOST_OS,
         symbol_level=-1,
     ):
-        if symbol_level == -1:
-            if self.is_debug:
-                symbol_level = 2
-            else:
-                symbol_level = 0
-        self.symbol_level = symbol_level
-
         if self.project == 'chromium':
             cmd = f'autogn {self.target_cpu} {self.build_type} --use-remoteexec -a {self.root_dir}'
             print(cmd)
             os.system(cmd)
             return
+
+        if symbol_level == -1:
+            if self.is_debug:
+                symbol_level = 2
+            else:
+                symbol_level = 0
 
         gn_args = "use_remoteexec=true"
         if self.is_debug:
@@ -118,10 +115,10 @@ class Project(Program):
         else:
             gn_args += " treat_warnings_as_errors=false"
 
-        gn_args += f" symbol_level={self.symbol_level}"
+        gn_args += f" symbol_level={symbol_level}"
 
         if self.project == "chromium":
-            if self.symbol_level == 0:
+            if symbol_level == 0:
                 gn_args += " blink_symbol_level=0 v8_symbol_level=0"
 
             gn_args += " enable_nacl=false proprietary_codecs=true"
@@ -162,19 +159,18 @@ class Project(Program):
         Util.info(cmd)
         os.system(cmd)
 
-    def build(self):
-        if self.project == 'angle':
-            cmd = f'autoninja angle_end2end_tests -C {self.out_dir}'
-        elif self.project == "chromium":
-            cmd = f'autoninja chrome chrome/test:telemetry_gpu_integration_test -C {self.out_dir}'
-        elif self.project == "dawn":
-            cmd = f'autoninja dawn_end2end_tests -C {self.out_dir}'
-        else:
-            cmd = ''
-            Util.impossible()
+    def build(self, target):
+        build_target = self.BUILD_TARGET_DICT[target]
+        if self.project == "chromium":
+            build_target += ' chrome'
+        cmd = f'autoninja {build_target} -C {self.out_dir}'
+        Util.info(cmd)
         os.system(cmd)
 
     def backup(self, targets, backup_inplace=False, backup_symbol=False):
+        if ('webgl' in targets or 'webgpu' in targets) and 'chrome' not in targets:
+            targets.append('chrome')
+
         if self.project == "chromium":
             rev = self.repo.get_working_dir_rev()
             rev_dir = Util.cal_backup_dir(rev)
@@ -335,7 +331,6 @@ class Project(Program):
                 Util.info(f"[{index + 1}/{src_file_count}] skip {dst_file}")
                 continue
 
-            print(dst_file)
             Util.ensure_dir(os.path.dirname(dst_file))
             if os.path.isdir(src_file) or '*' in src_file:
                 dst_file = os.path.dirname(dst_file.rstrip("/"))
