@@ -74,7 +74,7 @@ class Webgfx(Program):
         parser.add_argument(
             "--run-rev",
             dest="run_rev",
-            help="run rev, can be out, backup or download",
+            help="run rev, can be out or backup",
             default="default",
         )
         parser.add_argument(
@@ -130,6 +130,7 @@ class Webgfx(Program):
         parser.add_argument("--browser-folder", dest="browser_folder", help="browser folder", default="cr")
 
         parser.add_argument("--upload", dest="upload", help="upload", action="store_true")
+        parser.add_argument("--download", dest="download", help="download", action="store_true")
 
         parser.epilog = """
 examples:
@@ -220,6 +221,8 @@ examples:
                 self.run(project, target)
             if args.upload:
                 project.upload()
+            if args.download:
+                project.download()
 
         if args.run or args.batch or args.report:
             self.report()

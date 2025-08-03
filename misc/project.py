@@ -42,6 +42,9 @@ class Project(Program):
             self.repo = ChromiumRepo(root_dir)
 
         self.backup_dir = f"{root_dir}/../backups/{self.project}"
+        self.server_backups_dir = (
+            f"\\\\{Util.BACKUP_SERVER}\\backups\\{self.target_cpu}\\{Util.HOST_OS}\\{self.project}"
+        )
 
         if is_debug:
             build_type = "debug"
@@ -530,8 +533,7 @@ class Project(Program):
         archive_file = f"{rev_name}.zip"
 
         # Check if backup already exists on shared folder
-        server_upload_dir = f"\\\\{Util.BACKUP_SERVER}\\backups\\{self.target_cpu}\\{Util.HOST_OS}\\{self.project}"
-        server_archive_path = f"{server_upload_dir}\\{archive_file}"
+        server_archive_path = f"{self.server_backups_dir}\\{archive_file}"
 
         Util.info(f"Checking server path: {server_archive_path}")
 
@@ -577,7 +579,7 @@ class Project(Program):
             Util.info(f"Uploading {archive_file} to server...")
 
             # Ensure remote directory exists
-            Util.ensure_dir(server_upload_dir)
+            Util.ensure_dir(self.server_backups_dir)
 
             # Copy the archive to shared folder
             try:
@@ -587,3 +589,122 @@ class Project(Program):
                 Util.error(f"Failed to upload {archive_file} to server: {e}")
         else:
             Util.error(f"Archive file {local_archive_path} does not exist")
+
+    def download(self):  # pylint: disable=unused-argument
+        """
+        Download the latest backup from the remote server.
+        Finds the latest version on server and downloads it if not already present locally.
+        """
+        # Only support Windows
+        if Util.HOST_OS != Util.WINDOWS:
+            Util.warning(f"Download function only supports Windows, current OS: {Util.HOST_OS}")
+            return
+
+        # Get server backup directory
+        if not os.path.exists(self.server_backups_dir):
+            Util.warning(f"Server backup directory does not exist: {self.server_backups_dir}")
+            return
+
+        Util.info(f"Checking server directory: {self.server_backups_dir}")
+
+        # Find the latest backup on server
+        try:
+            server_files = os.listdir(self.server_backups_dir)
+            zip_files = [f for f in server_files if f.endswith('.zip')]
+
+            if not zip_files:
+                Util.warning(f"No backup files found on server in {self.server_backups_dir}")
+                return
+
+            # Extract revision names and find the latest
+            latest_rev = -1
+            latest_file = None
+
+            for zip_file in zip_files:
+                # Remove .zip extension to get revision name
+                rev_name = zip_file[:-4]
+                # Extract revision number using the backup pattern
+                match = re.search(Util.BACKUP_PATTERN, rev_name)
+                if match:
+                    rev_num = int(match.group(2))
+                    if rev_num > latest_rev:
+                        latest_rev = rev_num
+                        latest_file = zip_file
+
+            if not latest_file:
+                Util.warning("No valid backup files found on server")
+                return
+
+            Util.info(f"Found latest backup on server: {latest_file}")
+
+        except (OSError, PermissionError) as e:
+            Util.error(f"Failed to access server directory {self.server_backups_dir}: {e}")
+            return
+
+        # Check if backup already exists locally
+        rev_name = latest_file[:-4]  # Remove .zip extension
+        local_backup_path = f"{self.backup_dir}/{rev_name}"
+        local_archive_path = f"{self.backup_dir}/{latest_file}"
+        server_archive_path = f"{self.server_backups_dir}\\{latest_file}"
+
+        # Check if we already have this backup locally (either extracted or as archive)
+        if os.path.exists(local_backup_path):
+            Util.info(f"Backup {rev_name} already exists locally (extracted)")
+            return
+
+        if os.path.exists(local_archive_path):
+            Util.info(f"Backup archive {latest_file} already exists locally")
+            # Extract if directory doesn't exist
+            if not os.path.exists(local_backup_path):
+                Util.info(f"Extracting existing archive: {latest_file}")
+                self._extract_backup_archive(local_archive_path, rev_name)
+            return
+
+        # Download the backup
+        Util.info(f"Downloading {latest_file} from server...")
+
+        # Ensure local backup directory exists
+        Util.ensure_dir(self.backup_dir)
+
+        try:
+            # Copy the archive from shared folder
+            shutil.copy2(server_archive_path, local_archive_path)
+            Util.info(f"Successfully downloaded {latest_file} from server")
+
+            # Extract the archive
+            Util.info(f"Extracting archive: {latest_file}")
+            self._extract_backup_archive(local_archive_path, rev_name)
+
+        except (OSError, IOError, PermissionError) as e:
+            Util.error(f"Failed to download {latest_file} from server: {e}")
+
+    def _extract_backup_archive(self, archive_path, rev_name):
+        """
+        Extract a backup archive to the backup directory.
+
+        Args:
+            archive_path: Path to the archive file
+            rev_name: Name of the revision directory to extract to
+        """
+        if not os.path.exists(archive_path):
+            Util.error(f"Archive file does not exist: {archive_path}")
+            return
+
+        extract_path = f"{self.backup_dir}/{rev_name}"
+
+        # Change to backup directory for extraction
+        original_dir = os.getcwd()
+        Util.chdir(self.backup_dir)
+
+        try:
+            # Extract zip archive
+            import zipfile as zf
+
+            with zf.ZipFile(archive_path, 'r') as zipf:
+                zipf.extractall('.')
+            Util.info(f"Successfully extracted archive to: {extract_path}")
+
+        except (zf.BadZipFile, OSError, IOError) as e:
+            Util.error(f"Failed to extract archive {archive_path}: {e}")
+        finally:
+            Util.chdir(original_dir)
