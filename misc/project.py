@@ -475,7 +475,7 @@ class Project(Program):
                     cmd += f" webgpu_cts --passthrough --stable-jobs {run_args}"
                 result_file = ""
                 extra_browser_args = (
-                    "--disable-backgrounding-occluded-windows --js-flags=--expose-gc --force_high_performance_gpu"
+                    "--disable-backgrounding-occluded-windows --force_high_performance_gpu --no-sandbox"
                 )
                 if Util.HOST_OS == Util.LINUX:
                     result_file = f"{self.results_dir}/{target}-{combo}.log"
