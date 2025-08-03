@@ -1,7 +1,8 @@
 import os
 import re
+import shutil
 
-from util.base import *  # pylint: disable=unused-wildcard-import
+from util.base import Util, Program, ChromiumRepo, Timer
 
 
 class Project(Program):
@@ -358,7 +359,7 @@ class Project(Program):
             shutil.rmtree("out")
             Util.chdir(self.root_dir, verbose=True)
 
-    def run(self, target, combos, rev, run_dry=False, filter="all", validation='disabled', jobs=1):
+    def run(self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1):
         project_dir = self.root_dir
         project_backup_dir = f"{project_dir}/backup"
         if rev == "out":
@@ -396,8 +397,8 @@ class Project(Program):
                         run_args = "--gtest_filter=*AlphaFuncTest*D3D11*"
                     elif target == 'dawn':
                         run_args = "--gtest_filter=*BindGroupTests*"
-                elif filter != "all":
-                    run_args = f"--gtest_filter=*{filter}*"
+                elif run_filter != "all":
+                    run_args = f"--gtest_filter=*{run_filter}*"
                 elif Util.HOST_OS == Util.WINDOWS:
                     if target == 'angle':
                         run_args = "--gtest_filter=*D3D11*:-*SwiftShader*"
@@ -439,8 +440,8 @@ class Project(Program):
                         run_args += " --test-filter=*conformance/attribs*"
                     elif target == "webgpu":
                         run_args += " --test-filter=*webgpu:api,operation,render_pipeline,pipeline_output_targets:color,attachments:*"
-                elif filter != "all":
-                    run_args += f" --test-filter=*{filter}*"
+                elif run_filter != "all":
+                    run_args += f" --test-filter=*{run_filter}*"
 
                 # if self.run_verbose:
                 #    run_args += " --verbose"

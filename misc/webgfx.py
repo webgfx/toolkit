@@ -1,5 +1,6 @@
-# pylint: disable=line-too-long, missing-function-docstring, missing-module-docstring, missing-class-docstring, wildcard-import, unused-wildcard-import, disable=wrong-import-position
+# pylint: disable=line-too-long, missing-function-docstring, missing-module-docstring, missing-class-docstring, disable=wrong-import-position
 
+import argparse
 import os
 import re
 import subprocess
@@ -30,8 +31,8 @@ else:
 sys.path.append(SCRIPT_DIR)
 sys.path.append(SCRIPT_DIR + "/..")
 
-from util.base import *
-from misc.testhelper import *
+from util.base import Util, Program
+from misc.testhelper import TestResult
 from misc.project import Project
 
 
@@ -238,7 +239,7 @@ examples:
             combos=combos,
             rev=self.run_rev,
             run_dry=self.args.run_dry,
-            filter=self.run_filter,
+            run_filter=self.run_filter,
             validation=self.args.run_dawn_validation,
             jobs=self.run_jobs,
         )
