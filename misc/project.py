@@ -239,7 +239,7 @@ class Project(Program):
                     "gen/third_party/devtools-frontend/src/front_end",
                     "gen/third_party/devtools-frontend/src/inspector_overlay",
                     "pyproto/google/protobuf",
-                    # "locales",
+                    "locales",
                 ]
             )
 
@@ -303,7 +303,7 @@ class Project(Program):
                 f"{self.out_dir}/gen/third_party/devtools-frontend/src/front_end",
                 f"{self.out_dir}/gen/third_party/devtools-frontend/src/inspector_overlay",
                 f"{self.out_dir}/pyproto/google/protobuf",
-                # f"{self.out_dir}/locales",  # only *.pak files are needed
+                f"{self.out_dir}/locales/*.pak",
                 # extra files
             ]
             # if Util.HOST_OS == Util.WINDOWS:
@@ -321,6 +321,25 @@ class Project(Program):
             src_files += [
                 f"{self.out_dir}/gen/third_party/dawn/third_party/webgpu-cts/",
             ]
+
+        # handle src_files with glob patterns
+        expanded_src_files = []
+        for src_file in src_files:
+            if '*' in src_file or '?' in src_file:
+                # Handle glob patterns
+                import glob
+
+                matched_files = glob.glob(src_file)
+                if matched_files:
+                    expanded_src_files.extend(matched_files)
+                else:
+                    # If no matches found, keep the original pattern (will be handled as missing file)
+                    expanded_src_files.append(src_file)
+            else:
+                # Regular file path, no glob pattern
+                expanded_src_files.append(src_file)
+
+        src_files = expanded_src_files
 
         src_file_count = len(src_files)
         for index, src_file in enumerate(src_files):
@@ -344,8 +363,13 @@ class Project(Program):
                         src_file, dst_file, dirs_exist_ok=True, symlinks=False, ignore_dangling_symlinks=True
                     )
                 else:
-                    # For files, use copy2 to preserve metadata and permissions
+                    # For all files, use copy2 to preserve metadata and permissions
                     shutil.copy2(src_file, dst_file)
+
+                    # Apply Chrome LPAC sandbox permissions for Windows executables
+                    if Util.HOST_OS == Util.WINDOWS and src_file.endswith('.exe'):
+                        self._apply_chrome_sandbox_permissions(dst_file)
+
             except (OSError, IOError, PermissionError, FileNotFoundError, shutil.Error) as e:
                 Util.warning(f"Failed to copy [{src_file}] to [{dst_file}]: {e}")
 
@@ -706,3 +730,75 @@ class Project(Program):
             Util.error(f"Failed to extract archive {archive_path}: {e}")
         finally:
             Util.chdir(original_dir)
+
+    def _apply_chrome_sandbox_permissions(self, exe_path):
+        """
+        Apply Chrome LPAC sandbox permissions to an executable.
+
+        Args:
+            exe_path: Path to the executable to fix
+        """
+        import subprocess
+
+        filename = os.path.basename(exe_path)
+        # Util.info(f"Applying Chrome sandbox permissions: {filename}")
+
+        try:
+            # Take ownership and reset permissions
+            ownership_cmds = [
+                f'takeown /f "{exe_path}" /a',
+                f'icacls "{exe_path}" /reset /q',
+                f'icacls "{exe_path}" /inheritance:r /q',
+            ]
+
+            for cmd in ownership_cmds:
+                subprocess.run(cmd, shell=True, capture_output=True, text=True, check=False)
+
+            # Apply standard permissions
+            standard_permissions = [
+                f'icacls "{exe_path}" /grant "NT AUTHORITY\\SYSTEM:(F)" /q',
+                f'icacls "{exe_path}" /grant "BUILTIN\\Administrators:(F)" /q',
+                f'icacls "{exe_path}" /grant "BUILTIN\\Users:(RX)" /q',
+                f'icacls "{exe_path}" /grant "NT AUTHORITY\\Authenticated Users:(RX)" /q',
+            ]
+
+            success_count = 0
+            for cmd in standard_permissions:
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=False)
+                if result.returncode == 0:
+                    success_count += 1
+
+            # Apply LPAC permissions (try alternatives in order of known compatibility)
+            lpac_alternatives = [
+                f'icacls "{exe_path}" /grant "ALL APPLICATION PACKAGES:(RX)" /q',
+                f'icacls "{exe_path}" /grant "*S-1-15-2-1:(RX)" /q',
+                f'icacls "{exe_path}" /grant "*S-1-15-2-2:(RX)" /q',
+            ]
+
+            lpac_success = False
+            for lpac_cmd in lpac_alternatives:
+                result = subprocess.run(lpac_cmd, shell=True, capture_output=True, text=True, check=False)
+                if result.returncode == 0:
+                    lpac_success = True
+                    # permission_name = lpac_cmd.split('grant')[1].split(':(')[0].strip().replace('"', '')
+                    # Util.info(f"✓ LPAC permission applied: {permission_name}")
+                    break
+
+            # Set integrity level and clean up attributes
+            cleanup_cmds = [
+                f'icacls "{exe_path}" /setintegritylevel medium /q',
+                f'attrib -r -h -s -a "{exe_path}"',
+            ]
+
+            for cmd in cleanup_cmds:
+                subprocess.run(cmd, shell=True, capture_output=True, text=True, check=False)
+
+            if lpac_success:
+                # file_size = os.path.getsize(exe_path)
+                # Util.info(f"✓ Sandbox-compatible executable ready: {filename} ({file_size:,} bytes)")
+                pass
+            else:
+                Util.warning(f"⚠ LPAC permissions failed for: {filename}")
+
+        except (OSError, subprocess.SubprocessError, FileNotFoundError) as e:
+            Util.error(f"Sandbox permission fix failed for {filename}: {e}")
