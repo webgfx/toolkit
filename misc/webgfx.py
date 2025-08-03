@@ -74,7 +74,7 @@ class Webgfx(Program):
         parser.add_argument(
             "--run-rev",
             dest="run_rev",
-            help="run rev, can be out or backup",
+            help="run rev, can be out, backup or download",
             default="default",
         )
         parser.add_argument(
@@ -127,7 +127,9 @@ class Webgfx(Program):
 
         parser.add_argument("--batch", dest="batch", help="batch", action="store_true")
         parser.add_argument("--email", dest="email", help="email", action="store_true")
-        parser.add_argument("--browser-foler", dest="browser_foler", help="browser foler", default="cr")
+        parser.add_argument("--browser-folder", dest="browser_folder", help="browser folder", default="cr")
+
+        parser.add_argument("--upload", dest="upload", help="upload", action="store_true")
 
         parser.epilog = """
 examples:
@@ -143,7 +145,7 @@ examples:
         super().__init__(parser)
         args = self.args
 
-        self.browser_folder = args.browser_foler
+        self.browser_folder = args.browser_folder
         # strip the ending "\"
         root_dir = self.root_dir.strip("\\")
         self.results_dir = f"{root_dir}/results/{self.timestamp}"
@@ -216,6 +218,8 @@ examples:
                     has_chromium_backup = True
             if args.run or args.batch:
                 self.run(project, target)
+            if args.upload:
+                project.upload()
 
         if args.run or args.batch or args.report:
             self.report()

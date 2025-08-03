@@ -1,8 +1,5 @@
 import os
-import platform
 import re
-import subprocess
-import sys
 
 from util.base import *  # pylint: disable=unused-wildcard-import
 
@@ -43,9 +40,8 @@ class Project(Program):
 
         if project == "chromium":
             self.repo = ChromiumRepo(root_dir)
-            self.backup_dir = f"{root_dir}/backup"
-        else:
-            self.backup_dir = f"{root_dir}/backup"
+
+        self.backup_dir = f"{root_dir}/../backups/{self.project}"
 
         if is_debug:
             build_type = "debug"
@@ -458,7 +454,7 @@ class Project(Program):
                     result_file = f"{self.results_dir}/{target}-{combo}.log"
                 elif Util.HOST_OS == Util.WINDOWS:
                     if target == "webgl":
-                        extra_browser_args += f" --use-angle=d3d11"
+                        extra_browser_args += " --use-angle=d3d11"
                     result_file = f"{self.results_dir}/{target}-{combo}.log"
                 # warp
                 # extra_browser_args += " --enable-features=AllowD3D11WarpFallback --disable-gpu"
@@ -498,3 +494,96 @@ class Project(Program):
                 Util.append_file(self.run_log, f"{target} rev: {project_rev_name}")
 
             Util.chdir(self.root_dir, verbose=True)
+
+    def upload(self):  # pylint: disable=unused-argument
+        """
+        Upload the latest backup to the remote server.
+        Finds the latest version in backup directory and uploads it if not already present on server.
+
+        Args:
+            target: The target type (angle, dawn, chrome, etc.) - currently unused but kept for API compatibility
+            rev: The revision (typically 'latest' to get the most recent backup) - currently unused but kept for API compatibility
+        """
+        # Only support Windows
+        if Util.HOST_OS != Util.WINDOWS:
+            Util.warning(f"Upload function only supports Windows, current OS: {Util.HOST_OS}")
+            return
+
+        # Get the latest backup directory name
+        if not os.path.exists(self.backup_dir):
+            Util.warning(f"Backup directory {self.backup_dir} does not exist")
+            return
+
+        try:
+            rev_name, _ = Util.get_backup_dir(self.backup_dir, 'latest')
+        except (ValueError, IndexError, OSError) as e:
+            Util.warning(f"No backup found in {self.backup_dir}: {e}")
+            return
+
+        if not rev_name:
+            Util.warning(f"No valid backup found in {self.backup_dir}")
+            return
+
+        Util.info(f"Found latest backup: {rev_name}")
+
+        # Create archive file name for Windows (.zip)
+        archive_file = f"{rev_name}.zip"
+
+        # Check if backup already exists on shared folder
+        server_upload_dir = f"\\\\{Util.BACKUP_SERVER}\\backups\\{self.target_cpu}\\{Util.HOST_OS}\\{self.project}"
+        server_archive_path = f"{server_upload_dir}\\{archive_file}"
+
+        Util.info(f"Checking server path: {server_archive_path}")
+
+        if os.path.exists(server_archive_path):
+            Util.info(f"Backup {archive_file} already exists on server")
+            return
+
+        # Create archive if it doesn't exist locally
+        local_backup_path = f"{self.backup_dir}/{rev_name}"
+        local_archive_path = f"{self.backup_dir}/{archive_file}"
+
+        if not os.path.exists(local_archive_path):
+            Util.info(f"Creating archive: {archive_file}")
+
+            if not os.path.exists(local_backup_path):
+                Util.error(f"Backup directory {local_backup_path} does not exist")
+                return
+
+            # Change to backup directory to create relative paths in archive
+            original_dir = os.getcwd()
+            Util.chdir(self.backup_dir)
+
+            try:
+                # Create zip archive
+                # Use local import to avoid conflict with zipfile import at module level
+                import zipfile as zf
+
+                with zf.ZipFile(local_archive_path, 'w', zf.ZIP_DEFLATED) as zipf:
+                    for root, _, files in os.walk(rev_name):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            archive_path = os.path.relpath(file_path, '.')
+                            zipf.write(file_path, archive_path)
+                Util.info(f"Created zip archive: {archive_file}")
+
+            finally:
+                Util.chdir(original_dir)
+        else:
+            Util.info(f"Archive already exists locally: {archive_file}")
+
+        # Upload to server via shared folder
+        if os.path.exists(local_archive_path):
+            Util.info(f"Uploading {archive_file} to server...")
+
+            # Ensure remote directory exists
+            Util.ensure_dir(server_upload_dir)
+
+            # Copy the archive to shared folder
+            try:
+                shutil.copy2(local_archive_path, server_archive_path)
+                Util.info(f"Successfully uploaded {archive_file} to server")
+            except (OSError, IOError, PermissionError) as e:
+                Util.error(f"Failed to upload {archive_file} to server: {e}")
+        else:
+            Util.error(f"Archive file {local_archive_path} does not exist")
