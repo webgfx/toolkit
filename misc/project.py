@@ -466,7 +466,7 @@ class Project(Program):
                 cmd += f" --write-full-results-to {result_file}"
 
             # Run a combo
-            if target == "angle":
+            if target in ["angle", "dawn"]:
                 run_dir = f"{project_rev_dir}/{self.out_dir}"
             else:
                 run_dir = project_rev_dir

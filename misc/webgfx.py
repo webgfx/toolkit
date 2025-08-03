@@ -224,7 +224,7 @@ examples:
         if self.run_combo == "all":
             combos = []
         else:
-            combos = self.run_combo.split(",")
+            combos = list(map(int, self.run_combo.split()))
 
         project.run(
             target=target,
