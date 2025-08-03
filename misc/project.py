@@ -239,7 +239,7 @@ class Project(Program):
                     "gen/third_party/devtools-frontend/src/front_end",
                     "gen/third_party/devtools-frontend/src/inspector_overlay",
                     "pyproto/google/protobuf",
-                    "locales",
+                    # "locales",
                 ]
             )
 
@@ -303,7 +303,7 @@ class Project(Program):
                 f"{self.out_dir}/gen/third_party/devtools-frontend/src/front_end",
                 f"{self.out_dir}/gen/third_party/devtools-frontend/src/inspector_overlay",
                 f"{self.out_dir}/pyproto/google/protobuf",
-                f"{self.out_dir}/locales/*.pak",
+                # f"{self.out_dir}/locales",  # only *.pak files are needed
                 # extra files
             ]
             # if Util.HOST_OS == Util.WINDOWS:
@@ -336,21 +336,18 @@ class Project(Program):
                 dst_file = os.path.dirname(dst_file.rstrip("/"))
 
             Util.info(f"[{index + 1}/{src_file_count}] {src_file}")
-            cmd = f"cp -rf {src_file} {dst_file}"
-            os.system(cmd)
 
-            # if os.path.isdir(src_file):
-            #    try:
-            #        shutil.copytree(src_file, dst_file, dirs_exist_ok=True)
-            #    except Exception as e:
-            #        Util.warning(f"Failed to copy directory [{src_file}] to [{dst_file}]: {e}")
-            # else:
-            #    # shutil.copyfile(src_file, dst_file)
-            #    cmd = f"cp -rf {src_file} {dst_file}"
-            #    os.system(cmd)
-
-            # permission denied
-            # shutil.copyfile(file, dst_dir)
+            try:
+                if os.path.isdir(src_file):
+                    # For directories, use copytree with proper symlink handling
+                    shutil.copytree(
+                        src_file, dst_file, dirs_exist_ok=True, symlinks=False, ignore_dangling_symlinks=True
+                    )
+                else:
+                    # For files, use copy2 to preserve metadata and permissions
+                    shutil.copy2(src_file, dst_file)
+            except (OSError, IOError, PermissionError, FileNotFoundError, shutil.Error) as e:
+                Util.warning(f"Failed to copy [{src_file}] to [{dst_file}]: {e}")
 
         # Postprocess the backup
         if self.project == 'dawn':
