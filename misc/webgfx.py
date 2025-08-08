@@ -128,7 +128,7 @@ class Webgfx(Program):
 
         parser.add_argument("--batch", dest="batch", help="batch", action="store_true")
         parser.add_argument("--email", dest="email", help="email", action="store_true")
-        parser.add_argument("--browser-folder", dest="browser_folder", help="browser folder", default="cr")
+        parser.add_argument("--browser-dir", dest="browser_dir", help="browser dir", default="cr")
 
         parser.add_argument("--upload", dest="upload", help="upload", action="store_true")
         parser.add_argument("--download", dest="download", help="download", action="store_true")
@@ -147,7 +147,7 @@ examples:
         super().__init__(parser)
         args = self.args
 
-        self.browser_folder = args.browser_folder
+        self.browser_dir = args.browser_dir
         # strip the ending "\"
         root_dir = self.root_dir.strip("\\")
         self.results_dir = f"{root_dir}/results/{self.timestamp}"
@@ -202,7 +202,7 @@ examples:
         has_chromium_backup = False
         for target in self.targets:
             if target in ['webgl', 'webgpu']:
-                project = Project(root_dir=f'{self.root_dir}/{self.browser_folder}', results_dir=self.results_dir)
+                project = Project(root_dir=f'{self.root_dir}/{self.browser_dir}', results_dir=self.results_dir)
             else:
                 project = Project(root_dir=f'{self.root_dir}/{target}', results_dir=self.results_dir)
 

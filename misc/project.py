@@ -42,7 +42,7 @@ class Project(Program):
         if project == "chromium":
             self.repo = ChromiumRepo(root_dir)
 
-        self.backup_dir = f"{root_dir}/../backups/{self.project}"
+        self.project_backups_dir = f"{Util.BACKUP_DIR}/{self.project}"
         self.server_backups_dir = (
             f"\\\\{Util.BACKUP_SERVER}\\backups\\{self.target_cpu}\\{Util.HOST_OS}\\{self.project}"
         )
@@ -176,8 +176,8 @@ class Project(Program):
             rev_dir = Util.cal_backup_dir(rev)
         else:
             rev_dir = Util.cal_backup_dir()
-        backup_path = f"{self.backup_dir}/{rev_dir}"
-        Util.ensure_dir(self.backup_dir)
+        backup_path = f"{self.project_backups_dir}/{rev_dir}"
+        Util.ensure_dir(self.project_backups_dir)
 
         Util.info("Begin to backup %s" % rev_dir)
         if os.path.exists(backup_path) and not backup_inplace:
@@ -382,15 +382,14 @@ class Project(Program):
 
     def run(self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1):
         project_dir = self.root_dir
-        project_backup_dir = f"{project_dir}/backup"
         if rev == "out":
             if target in ["angle", "dawn"]:
                 project_rev_dir = project_dir
             else:
                 project_rev_dir = f"{project_dir}/src"
         else:
-            project_rev_name, _ = Util.get_backup_dir(project_backup_dir, "latest")
-            project_rev_dir = f"{project_backup_dir}/{project_rev_name}"
+            project_rev_name, _ = Util.get_backup_dir(self.project_backups_dir, "latest")
+            project_rev_dir = f"{self.project_backups_dir}/{project_rev_name}"
             # TestExpectation.update("webgpu_cts_tests", target_rev_dir)
 
         if target == "webgl":
@@ -506,7 +505,9 @@ class Project(Program):
                     output_file = f"{project_dir}/out/release_{self.target_cpu}/output.json"
                     # TestExpectation.update('angle_end2end_tests', f'{project_dir}')
                 else:
-                    output_file = f"{project_backup_dir}/{project_rev_name}/out/release_{self.target_cpu}/output.json"
+                    output_file = (
+                        f"{self.project_backups_dir}/{project_rev_name}/out/release_{self.target_cpu}/output.json"
+                    )
                     # TestExpectation.update("angle_end2end_tests", f"{project_dir}/backup/{project_rev_dir}")
 
                 result_file = f"{self.results_dir}/{target}-{combo}.json"
@@ -537,18 +538,18 @@ class Project(Program):
             return
 
         # Get the latest backup directory name
-        if not os.path.exists(self.backup_dir):
-            Util.warning(f"Backup directory {self.backup_dir} does not exist")
+        if not os.path.exists(self.project_backups_dir):
+            Util.warning(f"Backup directory {self.project_backups_dir} does not exist")
             return
 
         try:
-            rev_name, _ = Util.get_backup_dir(self.backup_dir, 'latest')
+            rev_name, _ = Util.get_backup_dir(self.project_backups_dir, 'latest')
         except (ValueError, IndexError, OSError) as e:
-            Util.warning(f"No backup found in {self.backup_dir}: {e}")
+            Util.warning(f"No backup found in {self.project_backups_dir}: {e}")
             return
 
         if not rev_name:
-            Util.warning(f"No valid backup found in {self.backup_dir}")
+            Util.warning(f"No valid backup found in {self.project_backups_dir}")
             return
 
         Util.info(f"Found latest backup: {rev_name}")
@@ -566,8 +567,8 @@ class Project(Program):
             return
 
         # Create archive if it doesn't exist locally
-        local_backup_path = f"{self.backup_dir}/{rev_name}"
-        local_archive_path = f"{self.backup_dir}/{archive_file}"
+        local_backup_path = f"{self.project_backups_dir}/{rev_name}"
+        local_archive_path = f"{self.project_backups_dir}/{archive_file}"
 
         if not os.path.exists(local_archive_path):
             Util.info(f"Creating archive: {archive_file}")
@@ -578,7 +579,7 @@ class Project(Program):
 
             # Change to backup directory to create relative paths in archive
             original_dir = os.getcwd()
-            Util.chdir(self.backup_dir)
+            Util.chdir(self.project_backups_dir)
 
             try:
                 # Create zip archive
@@ -667,8 +668,8 @@ class Project(Program):
 
         # Check if backup already exists locally
         rev_name = latest_file[:-4]  # Remove .zip extension
-        local_backup_path = f"{self.backup_dir}/{rev_name}"
-        local_archive_path = f"{self.backup_dir}/{latest_file}"
+        local_backup_path = f"{self.project_backups_dir}/{rev_name}"
+        local_archive_path = f"{self.project_backups_dir}/{latest_file}"
         server_archive_path = f"{self.server_backups_dir}\\{latest_file}"
 
         # Check if we already have this backup locally (either extracted or as archive)
@@ -688,7 +689,7 @@ class Project(Program):
         Util.info(f"Downloading {latest_file} from server...")
 
         # Ensure local backup directory exists
-        Util.ensure_dir(self.backup_dir)
+        Util.ensure_dir(self.project_backups_dir)
 
         try:
             # Copy the archive from shared folder
@@ -714,11 +715,11 @@ class Project(Program):
             Util.error(f"Archive file does not exist: {archive_path}")
             return
 
-        extract_path = f"{self.backup_dir}/{rev_name}"
+        extract_path = f"{self.project_backups_dir}/{rev_name}"
 
         # Change to backup directory for extraction
         original_dir = os.getcwd()
-        Util.chdir(self.backup_dir)
+        Util.chdir(self.project_backups_dir)
 
         try:
             # Extract zip archive
@@ -797,7 +798,7 @@ class Project(Program):
 
             if lpac_success:
                 # file_size = os.path.getsize(exe_path)
-                # Util.info(f"✓ Sandbox-compatible executable ready: {filename} ({file_size:,} bytes)")
+                Util.info(f"✓ Sandbox-compatible executable ready: {filename} ({file_size:,} bytes)")
                 pass
             else:
                 Util.warning(f"⚠ LPAC permissions failed for: {filename}")
