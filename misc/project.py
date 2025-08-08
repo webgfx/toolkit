@@ -42,9 +42,9 @@ class Project(Program):
         if project == "chromium":
             self.repo = ChromiumRepo(root_dir)
 
-        self.project_backups_dir = f"{Util.BACKUP_DIR}/{self.project}"
-        self.server_backups_dir = (
-            f"\\\\{Util.BACKUP_SERVER}\\backups\\{self.target_cpu}\\{Util.HOST_OS}\\{self.project}"
+        self.project_backup_dir = f"{Util.BACKUP_DIR}/{self.project}"
+        self.server_backup_dir = (
+            f"\\\\{Util.BACKUP_SERVER}\\backup\\{self.target_cpu}\\{Util.HOST_OS}\\{self.project}"
         )
 
         if is_debug:
@@ -61,9 +61,13 @@ class Project(Program):
         self.run_log = f"{self.results_dir}/run.log"
 
         if project == "chromium":
-            Util.chdir(f"{root_dir}/src")
+            tmp_dir = f"{root_dir}/src"
         else:
-            Util.chdir(root_dir)
+            tmp_dir = root_dir
+
+        if os.path.exists(tmp_dir):
+            Util.chdir(tmp_dir)
+        
 
     def sync(self, verbose=False):
         self._execute("git pull --no-recurse-submodules", exit_on_error=self.exit_on_error)
@@ -176,8 +180,8 @@ class Project(Program):
             rev_dir = Util.cal_backup_dir(rev)
         else:
             rev_dir = Util.cal_backup_dir()
-        backup_path = f"{self.project_backups_dir}/{rev_dir}"
-        Util.ensure_dir(self.project_backups_dir)
+        backup_path = f"{self.project_backup_dir}/{rev_dir}"
+        Util.ensure_dir(self.project_backup_dir)
 
         Util.info("Begin to backup %s" % rev_dir)
         if os.path.exists(backup_path) and not backup_inplace:
@@ -388,8 +392,8 @@ class Project(Program):
             else:
                 project_rev_dir = f"{project_dir}/src"
         else:
-            project_rev_name, _ = Util.get_backup_dir(self.project_backups_dir, "latest")
-            project_rev_dir = f"{self.project_backups_dir}/{project_rev_name}"
+            project_rev_name, _ = Util.get_backup_dir(self.project_backup_dir, "latest")
+            project_rev_dir = f"{self.project_backup_dir}/{project_rev_name}"
             # TestExpectation.update("webgpu_cts_tests", target_rev_dir)
 
         if target == "webgl":
@@ -488,8 +492,13 @@ class Project(Program):
                 cmd += f" --write-full-results-to {result_file}"
 
             # Run a combo
-            if target in ["angle", "dawn"]:
+            if target in ["angle"]:
                 run_dir = f"{project_rev_dir}/{self.out_dir}"
+            elif target in ["dawn"]:
+                if rev == "out":
+                    run_dir = f"{project_rev_dir}/{self.out_dir}"
+                else:
+                    run_dir = project_rev_dir
             else:
                 run_dir = project_rev_dir
             Util.chdir(run_dir, verbose=True)
@@ -506,7 +515,7 @@ class Project(Program):
                     # TestExpectation.update('angle_end2end_tests', f'{project_dir}')
                 else:
                     output_file = (
-                        f"{self.project_backups_dir}/{project_rev_name}/out/release_{self.target_cpu}/output.json"
+                        f"{self.project_backup_dir}/{project_rev_name}/out/release_{self.target_cpu}/output.json"
                     )
                     # TestExpectation.update("angle_end2end_tests", f"{project_dir}/backup/{project_rev_dir}")
 
@@ -521,7 +530,8 @@ class Project(Program):
             else:
                 Util.append_file(self.run_log, f"{target} rev: {project_rev_name}")
 
-            Util.chdir(self.root_dir, verbose=True)
+            if os.path.exists(self.root_dir):
+                Util.chdir(self.root_dir, verbose=True)
 
     def upload(self):  # pylint: disable=unused-argument
         """
@@ -538,18 +548,18 @@ class Project(Program):
             return
 
         # Get the latest backup directory name
-        if not os.path.exists(self.project_backups_dir):
-            Util.warning(f"Backup directory {self.project_backups_dir} does not exist")
+        if not os.path.exists(self.project_backup_dir):
+            Util.warning(f"Backup directory {self.project_backup_dir} does not exist")
             return
 
         try:
-            rev_name, _ = Util.get_backup_dir(self.project_backups_dir, 'latest')
+            rev_name, _ = Util.get_backup_dir(self.project_backup_dir, 'latest')
         except (ValueError, IndexError, OSError) as e:
-            Util.warning(f"No backup found in {self.project_backups_dir}: {e}")
+            Util.warning(f"No backup found in {self.project_backup_dir}: {e}")
             return
 
         if not rev_name:
-            Util.warning(f"No valid backup found in {self.project_backups_dir}")
+            Util.warning(f"No valid backup found in {self.project_backup_dir}")
             return
 
         Util.info(f"Found latest backup: {rev_name}")
@@ -558,7 +568,7 @@ class Project(Program):
         archive_file = f"{rev_name}.zip"
 
         # Check if backup already exists on shared folder
-        server_archive_path = f"{self.server_backups_dir}\\{archive_file}"
+        server_archive_path = f"{self.server_backup_dir}\\{archive_file}"
 
         Util.info(f"Checking server path: {server_archive_path}")
 
@@ -567,8 +577,8 @@ class Project(Program):
             return
 
         # Create archive if it doesn't exist locally
-        local_backup_path = f"{self.project_backups_dir}/{rev_name}"
-        local_archive_path = f"{self.project_backups_dir}/{archive_file}"
+        local_backup_path = f"{self.project_backup_dir}/{rev_name}"
+        local_archive_path = f"{self.project_backup_dir}/{archive_file}"
 
         if not os.path.exists(local_archive_path):
             Util.info(f"Creating archive: {archive_file}")
@@ -579,7 +589,7 @@ class Project(Program):
 
             # Change to backup directory to create relative paths in archive
             original_dir = os.getcwd()
-            Util.chdir(self.project_backups_dir)
+            Util.chdir(self.project_backup_dir)
 
             try:
                 # Create zip archive
@@ -604,7 +614,7 @@ class Project(Program):
             Util.info(f"Uploading {archive_file} to server...")
 
             # Ensure remote directory exists
-            Util.ensure_dir(self.server_backups_dir)
+            Util.ensure_dir(self.server_backup_dir)
 
             # Copy the archive to shared folder
             try:
@@ -626,19 +636,19 @@ class Project(Program):
             return
 
         # Get server backup directory
-        if not os.path.exists(self.server_backups_dir):
-            Util.warning(f"Server backup directory does not exist: {self.server_backups_dir}")
+        if not os.path.exists(self.server_backup_dir):
+            Util.warning(f"Server backup directory does not exist: {self.server_backup_dir}")
             return
 
-        Util.info(f"Checking server directory: {self.server_backups_dir}")
+        Util.info(f"Checking server directory: {self.server_backup_dir}")
 
         # Find the latest backup on server
         try:
-            server_files = os.listdir(self.server_backups_dir)
+            server_files = os.listdir(self.server_backup_dir)
             zip_files = [f for f in server_files if f.endswith('.zip')]
 
             if not zip_files:
-                Util.warning(f"No backup files found on server in {self.server_backups_dir}")
+                Util.warning(f"No backup files found on server in {self.server_backup_dir}")
                 return
 
             # Extract revision names and find the latest
@@ -663,14 +673,14 @@ class Project(Program):
             Util.info(f"Found latest backup on server: {latest_file}")
 
         except (OSError, PermissionError) as e:
-            Util.error(f"Failed to access server directory {self.server_backups_dir}: {e}")
+            Util.error(f"Failed to access server directory {self.server_backup_dir}: {e}")
             return
 
         # Check if backup already exists locally
         rev_name = latest_file[:-4]  # Remove .zip extension
-        local_backup_path = f"{self.project_backups_dir}/{rev_name}"
-        local_archive_path = f"{self.project_backups_dir}/{latest_file}"
-        server_archive_path = f"{self.server_backups_dir}\\{latest_file}"
+        local_backup_path = f"{self.project_backup_dir}/{rev_name}"
+        local_archive_path = f"{self.project_backup_dir}/{latest_file}"
+        server_archive_path = f"{self.server_backup_dir}\\{latest_file}"
 
         # Check if we already have this backup locally (either extracted or as archive)
         if os.path.exists(local_backup_path):
@@ -689,7 +699,7 @@ class Project(Program):
         Util.info(f"Downloading {latest_file} from server...")
 
         # Ensure local backup directory exists
-        Util.ensure_dir(self.project_backups_dir)
+        Util.ensure_dir(self.project_backup_dir)
 
         try:
             # Copy the archive from shared folder
@@ -715,11 +725,11 @@ class Project(Program):
             Util.error(f"Archive file does not exist: {archive_path}")
             return
 
-        extract_path = f"{self.project_backups_dir}/{rev_name}"
+        extract_path = f"{self.project_backup_dir}/{rev_name}"
 
         # Change to backup directory for extraction
         original_dir = os.getcwd()
-        Util.chdir(self.project_backups_dir)
+        Util.chdir(self.project_backup_dir)
 
         try:
             # Extract zip archive
