@@ -218,12 +218,12 @@ examples:
                 project.backup([target])
                 if target in ['webgl', 'webgpu']:
                     has_chromium_backup = True
+            if args.download:
+                project.download()
             if args.run or args.batch:
                 self.run(project, target)
             if args.upload:
                 project.upload()
-            if args.download:
-                project.download()
 
         if args.run or args.batch or args.report:
             self.report()
