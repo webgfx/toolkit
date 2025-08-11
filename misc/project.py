@@ -43,9 +43,7 @@ class Project(Program):
             self.repo = ChromiumRepo(root_dir)
 
         self.project_backup_dir = f"{Util.BACKUP_DIR}/{self.project}"
-        self.server_backup_dir = (
-            f"\\\\{Util.BACKUP_SERVER}\\backup\\{self.target_cpu}\\{Util.HOST_OS}\\{self.project}"
-        )
+        self.server_backup_dir = f"\\\\{Util.BACKUP_SERVER}\\backup\\{self.target_cpu}\\{Util.HOST_OS}\\{self.project}"
 
         if is_debug:
             build_type = "debug"
@@ -67,7 +65,6 @@ class Project(Program):
 
         if os.path.exists(tmp_dir):
             Util.chdir(tmp_dir)
-        
 
     def sync(self, verbose=False):
         self._execute("git pull --no-recurse-submodules", exit_on_error=self.exit_on_error)
@@ -478,7 +475,7 @@ class Project(Program):
                     cmd += f" webgpu_cts --passthrough --stable-jobs {run_args}"
                 result_file = ""
                 extra_browser_args = (
-                    "--disable-backgrounding-occluded-windows --force_high_performance_gpu --no-sandbox"
+                    "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
                 )
                 if Util.HOST_OS == Util.LINUX:
                     result_file = f"{self.results_dir}/{target}-{combo}.log"
@@ -807,7 +804,7 @@ class Project(Program):
                 subprocess.run(cmd, shell=True, capture_output=True, text=True, check=False)
 
             if lpac_success:
-                # file_size = os.path.getsize(exe_path)
+                file_size = os.path.getsize(exe_path)
                 Util.info(f"✓ Sandbox-compatible executable ready: {filename} ({file_size:,} bytes)")
                 pass
             else:
