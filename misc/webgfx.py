@@ -150,9 +150,9 @@ examples:
         self.browser_dir = args.browser_dir
         # strip the ending "\"
         root_dir = self.root_dir.strip("\\")
-        self.results_dir = f"{root_dir}/results/{self.timestamp}"
+        self.result_dir = f"{root_dir}/result/{self.timestamp}"
 
-        self.run_log = f"{self.results_dir}/run.log"
+        self.run_log = f"{self.result_dir}/run.log"
         Util.ensure_nofile(self.run_log)
         self.run_chrome_channel = args.run_chrome_channel
         self.run_filter = args.run_filter
@@ -202,9 +202,9 @@ examples:
         has_chromium_backup = False
         for target in self.targets:
             if target in ['webgl', 'webgpu']:
-                project = Project(root_dir=f'{self.root_dir}/{self.browser_dir}', results_dir=self.results_dir)
+                project = Project(root_dir=f'{self.root_dir}/{self.browser_dir}', result_dir=self.result_dir)
             else:
-                project = Project(root_dir=f'{self.root_dir}/{target}', results_dir=self.results_dir)
+                project = Project(root_dir=f'{self.root_dir}/{target}', result_dir=self.result_dir)
 
             if args.sync or args.batch:
                 project.sync()
@@ -246,12 +246,12 @@ examples:
 
     def report(self):
         if self.args.report:
-            self.results_dir = self.args.report
+            self.result_dir = self.args.report
 
         regression_count = 0
         summary = "Final summary:\n"
         details = "Final details:\n"
-        for result_file in os.listdir(self.results_dir):
+        for result_file in os.listdir(self.result_dir):
             if "angle" in result_file or "webgl" in result_file or "webgpu" in result_file:
                 test_type = "gtest_angle"
             elif "dawn" in result_file:
@@ -259,7 +259,7 @@ examples:
             else:
                 continue
 
-            result = TestResult(f"{self.results_dir}/{result_file}", test_type)
+            result = TestResult(f"{self.result_dir}/{result_file}", test_type)
             regression_count += len(result.pass_fail)
             result_str = f"{os.path.splitext(result_file)[0]}: PASS_FAIL {len(result.pass_fail)}, FAIL_PASS {len(result.fail_pass)}, FAIL_FAIL {len(result.fail_fail)} PASS_PASS {len(result.pass_pass)}\n"
             summary += result_str
@@ -273,7 +273,7 @@ examples:
             run_log_content = open(self.run_log, encoding="utf-8").read()
             Util.info(run_log_content)
 
-        report_file = f"{self.results_dir}/report.txt"
+        report_file = f"{self.result_dir}/report.txt"
         Util.ensure_nofile(report_file)
         Util.append_file(report_file, summary)
         Util.append_file(report_file, details)

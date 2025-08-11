@@ -31,7 +31,7 @@ class Project(Program):
         "webgpu": "//chrome/test:telemetry_gpu_integration_test",
     }
 
-    def __init__(self, root_dir, results_dir, is_debug=False):
+    def __init__(self, root_dir, result_dir, is_debug=False):
         super().__init__()
         project = os.path.basename(root_dir)
         # handle project chromium
@@ -55,8 +55,8 @@ class Project(Program):
         self.out_dir = f"out/{self.build_type}_{self.target_cpu}"
         self.exit_on_error = False
         self.root_dir = root_dir
-        self.results_dir = results_dir
-        self.run_log = f"{self.results_dir}/run.log"
+        self.result_dir = result_dir
+        self.run_log = f"{self.result_dir}/run.log"
 
         if project == "chromium":
             tmp_dir = f"{root_dir}/src"
@@ -264,8 +264,8 @@ class Project(Program):
                 [
                     # "gen/",
                     # "obj/",
-                    "../../testing/test_env.py",
-                    "../../testing/location_tags.json",
+                    #"../../testing/test_env.py",
+                    #"../../testing/location_tags.json",
                     "gen/third_party/dawn/third_party/webgpu-cts",
                 ]
             )
@@ -428,7 +428,7 @@ class Project(Program):
                     run_args += " --test-launcher-bot-mode"
 
                 if target == 'dawn':
-                    result_file = f"{self.results_dir}/{target}-{combo}.json"
+                    result_file = f"{self.result_dir}/{target}-{combo}.json"
                     run_args += f" --gtest_output=json:{result_file} --enable-backend-validation={validation} --backend={combo} --exclusive-device-type-preference=discrete,integrated"
                     # cmd += ' --run-suppressed-tests'
                     # for output, Chrome build uses --gtest_output=json:%s, standalone build uses --test-launcher-summary-output=%s
@@ -478,11 +478,11 @@ class Project(Program):
                     "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
                 )
                 if Util.HOST_OS == Util.LINUX:
-                    result_file = f"{self.results_dir}/{target}-{combo}.log"
+                    result_file = f"{self.result_dir}/{target}-{combo}.log"
                 elif Util.HOST_OS == Util.WINDOWS:
                     if target == "webgl":
                         extra_browser_args += " --use-angle=d3d11"
-                    result_file = f"{self.results_dir}/{target}-{combo}.log"
+                    result_file = f"{self.result_dir}/{target}-{combo}.log"
                 # warp
                 # extra_browser_args += " --enable-features=AllowD3D11WarpFallback --disable-gpu"
                 cmd += f' --extra-browser-args="{extra_browser_args}"'
@@ -516,7 +516,7 @@ class Project(Program):
                     )
                     # TestExpectation.update("angle_end2end_tests", f"{project_dir}/backup/{project_rev_dir}")
 
-                result_file = f"{self.results_dir}/{target}-{combo}.json"
+                result_file = f"{self.result_dir}/{target}-{combo}.json"
                 if os.path.exists(output_file):
                     shutil.move(output_file, result_file)
                 else:
