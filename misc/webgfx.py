@@ -231,7 +231,7 @@ examples:
     def run(self, project, target):
         if self.run_combo == "all":
             if target == "webgpu":
-                combos = ["d3d12"]
+                combos = [0]
             else:
                 combos = []
         else:
