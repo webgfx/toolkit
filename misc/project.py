@@ -383,6 +383,9 @@ class Project(Program):
             Util.chdir(self.root_dir)
 
     def run(self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1):
+        if rev not in ["out", "backup"]:
+            Util.impossible()
+
         project_dir = self.root_dir
         if rev == "out":
             if target in ["angle", "dawn"]:
@@ -449,11 +452,8 @@ class Project(Program):
                 # elif combo == "2.0.1":
                 #    TestExpectation.update("webgl2_cts_tests", target_rev_dir)
 
-                if rev in ["out", "backup"]:
-                    Util.chdir(project_rev_dir)
-                    run_args = f"--browser=release_{self.target_cpu}"
-                else:
-                    run_args = f"--browser={rev}"
+                Util.chdir(project_rev_dir)
+                run_args = f"--browser=release_{self.target_cpu}"
 
                 if run_dry:
                     # run_args += ' --test-filter=*copy-texture-image-same-texture*::*ext-texture-norm16*'
@@ -529,10 +529,11 @@ class Project(Program):
                     Util.ensure_file(result_file)
 
             if rev == "out":
-                rev = 0
                 if self.project == "chromium":
-                    rev = self.repo.get_working_dir_rev()
-                Util.append_file(self.run_log, f"{target} rev{self.SEPARATOR}out ({Util.cal_backup_dir(rev)})")
+                    repo_rev = self.repo.get_working_dir_rev()
+                else:
+                    repo_rev = 0
+                Util.append_file(self.run_log, f"{target} rev{self.SEPARATOR}out ({Util.cal_backup_dir(repo_rev)})")
             else:
                 Util.append_file(self.run_log, f"{target} rev{self.SEPARATOR}backup ({project_rev_name})")
 
