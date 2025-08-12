@@ -30,6 +30,7 @@ class Project(Program):
         "webgl": "//chrome/test:telemetry_gpu_integration_test",
         "webgpu": "//chrome/test:telemetry_gpu_integration_test",
     }
+    SEPARATOR = ": "
 
     def __init__(self, root_dir, result_dir, is_debug=False):
         super().__init__()
@@ -475,10 +476,10 @@ class Project(Program):
                         cmd += f" webgpu_compat_cts"
                     else:
                         cmd += f" webgpu_cts"
-                    cmd += f" --passthrough --stable-jobs {run_args}"
+                    cmd += f" {run_args}"
                 result_file = ""
 
-                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
+                extra_browser_args = ""
                 if target == "webgpu" and combo == "d3d11":
                     extra_browser_args += " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
 
@@ -508,7 +509,7 @@ class Project(Program):
             timer = Timer()
             Util.info(cmd)
             os.system(cmd)
-            Util.append_file(self.run_log, f"{target}-{combo} run: {timer.stop()}")
+            Util.append_file(self.run_log, f"{target}-{combo} run{self.SEPARATOR}{timer.stop()}")
 
             # Postprocess the result
             if target == "angle":
@@ -528,9 +529,12 @@ class Project(Program):
                     Util.ensure_file(result_file)
 
             if rev == "out":
-                Util.append_file(self.run_log, f"{target} rev: out")
+                rev = 0
+                if self.project == "chromium":
+                    rev = self.repo.get_working_dir_rev()
+                Util.append_file(self.run_log, f"{target} rev{self.SEPARATOR}out ({Util.cal_backup_dir(rev)})")
             else:
-                Util.append_file(self.run_log, f"{target} rev: {project_rev_name}")
+                Util.append_file(self.run_log, f"{target} rev{self.SEPARATOR}backup ({project_rev_name})")
 
             if os.path.exists(self.root_dir):
                 Util.chdir(self.root_dir)

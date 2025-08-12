@@ -41,7 +41,7 @@ class Webgfx(Program):
         # Util.LINUX: ['WebglConformance_conformance2_textures_misc_tex_3d_size_limit'],
         Util.LINUX: [],
     }
-    SEPARATOR = "|"
+    SEPARATOR = ": "
 
     def __init__(self):
         parser = argparse.ArgumentParser(description="webgfx")
