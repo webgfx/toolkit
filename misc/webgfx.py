@@ -230,7 +230,10 @@ examples:
 
     def run(self, project, target):
         if self.run_combo == "all":
-            combos = []
+            if target == "webgpu":
+                combos = ["d3d12"]
+            else:
+                combos = []
         else:
             combos = list(map(int, self.run_combo.split()))
 
@@ -279,7 +282,8 @@ examples:
         Util.append_file(report_file, details)
 
         if self.args.email or self.args.batch:
-            subject = f"[Chrome Drop] {Util.HOST_NAME} {self.timestamp}"
+            gpu_name, _, _, _, _ = Util.get_gpu_info()
+            subject = f"[webgfx report] {self.timestamp} | {Util.HOST_NAME} | {gpu_name}"
             content = summary + "\n" + details + "\n"
             if os.path.exists(self.run_log):
                 content += run_log_content

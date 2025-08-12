@@ -399,7 +399,7 @@ class Project(Program):
             elif Util.HOST_OS in [Util.LINUX, Util.DARWIN]:
                 all_combos = ["2.0.1"]
         elif target == "webgpu":
-            all_combos = ["d3d12"]
+            all_combos = ["d3d12", "d3d11"]
         elif target == 'angle':
             all_combos = ["d3d11"]
         elif target == 'dawn':
@@ -472,11 +472,17 @@ class Project(Program):
                 if target == "webgl":
                     cmd += f" webgl{combo[0]}_conformance {run_args} --webgl-conformance-version={combo}"
                 elif target == "webgpu":
-                    cmd += f" webgpu_cts --passthrough --stable-jobs {run_args}"
+                    if combo == "d3d11":
+                        cmd += f" webgpu_compat_cts"
+                    else:
+                        cmd += f" webgpu_cts"
+                    cmd += f" --passthrough --stable-jobs {run_args}"
                 result_file = ""
-                extra_browser_args = (
-                    "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
-                )
+
+                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
+                if target == "webgpu" and combo == "d3d11":
+                    extra_browser_args += " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
+
                 if Util.HOST_OS == Util.LINUX:
                     result_file = f"{self.result_dir}/{target}-{combo}.log"
                 elif Util.HOST_OS == Util.WINDOWS:
