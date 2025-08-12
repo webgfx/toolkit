@@ -379,7 +379,7 @@ class Project(Program):
             Util.chdir(backup_path)
             Util.copy_files(self.out_dir, ".")
             shutil.rmtree("out")
-            Util.chdir(self.root_dir, verbose=True)
+            Util.chdir(self.root_dir)
 
     def run(self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1):
         project_dir = self.root_dir
@@ -448,12 +448,11 @@ class Project(Program):
                 # elif combo == "2.0.1":
                 #    TestExpectation.update("webgl2_cts_tests", target_rev_dir)
 
-                run_args = "--disable-log-uploads"
                 if rev in ["out", "backup"]:
-                    Util.chdir(project_rev_dir, verbose=True)
-                    run_args += f" --browser=release_{self.target_cpu}"
+                    Util.chdir(project_rev_dir)
+                    run_args = f"--browser=release_{self.target_cpu}"
                 else:
-                    run_args += f" --browser={rev}"
+                    run_args = f"--browser={rev}"
 
                 if run_dry:
                     # run_args += ' --test-filter=*copy-texture-image-same-texture*::*ext-texture-norm16*'
@@ -504,7 +503,7 @@ class Project(Program):
                     run_dir = project_rev_dir
             else:
                 run_dir = project_rev_dir
-            Util.chdir(run_dir, verbose=True)
+            Util.chdir(run_dir)
 
             timer = Timer()
             Util.info(cmd)
@@ -534,7 +533,7 @@ class Project(Program):
                 Util.append_file(self.run_log, f"{target} rev: {project_rev_name}")
 
             if os.path.exists(self.root_dir):
-                Util.chdir(self.root_dir, verbose=True)
+                Util.chdir(self.root_dir)
 
     def upload(self):  # pylint: disable=unused-argument
         """
