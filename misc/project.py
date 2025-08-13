@@ -462,12 +462,12 @@ class Project(Program):
                     elif target == "webgpu":
                         run_args += " --test-filter=*webgpu:api,operation,render_pipeline,pipeline_output_targets:color,attachments:*"
                 elif run_filter != "all":
-                    run_args += f" --test-filter=*{run_filter}*"
+                    run_args += f' --test-filter=*{run_filter.replace('\"', '\\\"')}*'
 
                 # if self.run_verbose:
                 #    run_args += " --verbose"
 
-                run_args += f" --jobs={jobs}"
+                run_args += f" --jobs={jobs} --disable-log-uploads --stable-jobs --retry-limit 3"
                 cmd = "vpython3.bat content/test/gpu/run_gpu_integration_test.py"
                 if target == "webgl":
                     cmd += f" webgl{combo[0]}_conformance {run_args} --webgl-conformance-version={combo}"
@@ -479,7 +479,7 @@ class Project(Program):
                     cmd += f" {run_args}"
                 result_file = ""
 
-                extra_browser_args = ""
+                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
                 if target == "webgpu" and combo == "d3d11":
                     extra_browser_args += " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
 
