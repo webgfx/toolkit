@@ -263,10 +263,10 @@ class Project(Program):
         if "webgl" in targets or "webgpu" in targets:
             exclude_files.extend(
                 [
-                    # "gen/",
-                    # "obj/",
-                    #"../../testing/test_env.py",
-                    #"../../testing/location_tags.json",
+                    "gen/",
+                    "obj/",
+                    "../../testing/test_env.py",
+                    "../../testing/location_tags.json",
                     "gen/third_party/dawn/third_party/webgpu-cts",
                 ]
             )
@@ -342,7 +342,6 @@ class Project(Program):
                 expanded_src_files.append(src_file)
 
         src_files = expanded_src_files
-
         src_file_count = len(src_files)
         for index, src_file in enumerate(src_files):
             dst_file = f"{backup_path}/{src_file}"
@@ -407,7 +406,7 @@ class Project(Program):
         elif target == 'angle':
             all_combos = ["d3d11"]
         elif target == 'dawn':
-            all_combos = ["d3d12"]
+            all_combos = ["d3d12", "d3d11"]
 
         if combos == []:
             combos = [i for i in range(len(all_combos))]
