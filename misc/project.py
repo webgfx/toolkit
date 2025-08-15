@@ -466,7 +466,7 @@ class Project(Program):
                 # if self.run_verbose:
                 #    run_args += " --verbose"
 
-                run_args += f" --jobs={jobs} --disable-log-uploads --stable-jobs --retry-limit 3"
+                run_args += f" --jobs={jobs} --disable-log-uploads --stable-jobs"
                 cmd = "vpython3.bat content/test/gpu/run_gpu_integration_test.py"
                 if target == "webgl":
                     cmd += f" webgl{combo[0]}_conformance {run_args} --webgl-conformance-version={combo}"
@@ -475,12 +475,14 @@ class Project(Program):
                         cmd += f" webgpu_compat_cts"
                     else:
                         cmd += f" webgpu_cts"
-                    cmd += f" {run_args}"
+                    cmd += f" --retry-limit 1 {run_args}"
                 result_file = ""
 
                 extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
                 if target == "webgpu" and combo == "d3d11":
-                    extra_browser_args += " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
+                    extra_browser_args += (
+                        " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
+                    )
 
                 if Util.HOST_OS == Util.LINUX:
                     result_file = f"{self.result_dir}/{target}-{combo}.log"
