@@ -83,10 +83,13 @@ class Project(Program):
         vulkan_only=False,
         target_os=Util.HOST_OS,
         symbol_level=-1,
+        local=False,
     ):
         if self.project == 'chromium':
-            cmd = f'autogn {self.target_cpu} {self.build_type} --use-remoteexec -a {self.root_dir}'
-            print(cmd)
+            cmd = f'autogn {self.target_cpu} {self.build_type} -a {self.root_dir}'
+            if not local:
+                cmd += " --use-remoteexec"
+            Util.info(cmd)
             os.system(cmd)
             return
 
@@ -96,7 +99,10 @@ class Project(Program):
             else:
                 symbol_level = 0
 
-        gn_args = "use_remoteexec=true"
+        if local:
+            gn_args = ""
+        else:
+            gn_args = "use_remoteexec=true"
         if self.is_debug:
             gn_args += " is_debug=true"
         else:

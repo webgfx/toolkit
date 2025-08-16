@@ -49,6 +49,7 @@ class Webgfx(Program):
         parser.add_argument("--target", dest="target", help="target", default="all")
         parser.add_argument("--sync", dest="sync", help="sync", action="store_true")
         parser.add_argument("--makefile", dest="makefile", help="makefile", action="store_true")
+        parser.add_argument("--makefile-local", dest="makefile_local", help="makefile without rbe", action="store_true")
         parser.add_argument("--build", dest="build", help="build", action="store_true")
 
         parser.add_argument(
@@ -209,7 +210,7 @@ examples:
             if args.sync or args.batch:
                 project.sync()
             if args.makefile or args.batch:
-                project.makefile()
+                project.makefile(local=args.makefile_local)
             if args.build or args.batch:
                 project.build(target)
             if args.backup or args.batch:
