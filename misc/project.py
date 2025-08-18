@@ -806,7 +806,7 @@ class Project(Program):
 
             if lpac_success:
                 file_size = os.path.getsize(exe_path)
-                Util.info(f"✓ Sandbox-compatible executable ready: {filename} ({file_size:,} bytes)")
+                #Util.info(f"✓ Sandbox-compatible executable ready: {filename} ({file_size:,} bytes)")
                 pass
             else:
                 Util.warning(f"⚠ LPAC permissions failed for: {filename}")
