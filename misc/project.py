@@ -13,7 +13,6 @@ class Project(Program):
         "angle_perf": "angle_perftests",
         "angle_unit": "angle_unittests",
         "dawn": "dawn_end2end_tests",
-        # For chrome drop
         "webgl": "chrome/test:telemetry_gpu_integration_test",
         "webgpu": "chrome/test:telemetry_gpu_integration_test",
     }
@@ -26,7 +25,6 @@ class Project(Program):
         "gl_tests": "//gpu:gl_tests",
         "vulkan_tests": "//gpu/vulkan:vulkan_tests",
         "webgpu_blink_web_tests": "//:webgpu_blink_web_tests",
-        # For chrome drop
         "webgl": "//chrome/test:telemetry_gpu_integration_test",
         "webgpu": "//chrome/test:telemetry_gpu_integration_test",
     }
@@ -244,10 +242,15 @@ class Project(Program):
         if 'chrome' in targets:
             exclude_files.extend(
                 [
+                    "locales",
+                    "gen/third_party/dawn/third_party/webgpu-cts",
+                    "gen/third_party/dawn/webgpu-cts",
                     "gen/third_party/devtools-frontend/src/front_end",
                     "gen/third_party/devtools-frontend/src/inspector_overlay",
+                    "obj/",
                     "pyproto/google/protobuf",
-                    "locales",
+                    "../../testing/test_env.py",
+                    "../../testing/location_tags.json",
                 ]
             )
 
@@ -266,16 +269,6 @@ class Project(Program):
                 ]
             )
 
-        if "webgl" in targets or "webgpu" in targets:
-            exclude_files.extend(
-                [
-                    "gen/",
-                    "obj/",
-                    "../../testing/test_env.py",
-                    "../../testing/location_tags.json",
-                    "gen/third_party/dawn/third_party/webgpu-cts",
-                ]
-            )
         src_files = []
         for tmp_file in tmp_files:
             tmp_file = tmp_file.rstrip("\r")
@@ -306,11 +299,12 @@ class Project(Program):
 
         if "chrome" in targets:
             src_files += [
+                f"{self.out_dir}/locales/*.pak",
+                f"{self.out_dir}/gen/third_party/dawn/third_party/webgpu-cts/",
+                f"{self.out_dir}/gen/third_party/dawn/webgpu-cts",
                 f"{self.out_dir}/gen/third_party/devtools-frontend/src/front_end",
                 f"{self.out_dir}/gen/third_party/devtools-frontend/src/inspector_overlay",
                 f"{self.out_dir}/pyproto/google/protobuf",
-                f"{self.out_dir}/locales/*.pak",
-                # extra files
             ]
             # if Util.HOST_OS == Util.WINDOWS:
             #    src_files += [
@@ -322,11 +316,6 @@ class Project(Program):
             #        "infra/config/generated/builders/try/dawn-linux-x64-deps-rel/targets/chromium.dawn.json",
             #        "infra/config/generated/builders/try/gpu-fyi-try-linux-intel-rel/targets/chromium.gpu.fyi.json",
             #    ]
-
-        if "webgl" in targets or "webgpu" in targets:
-            src_files += [
-                f"{self.out_dir}/gen/third_party/dawn/third_party/webgpu-cts/",
-            ]
 
         # handle src_files with glob patterns
         expanded_src_files = []
@@ -380,10 +369,8 @@ class Project(Program):
 
         # Postprocess the backup
         if self.project == 'dawn':
-            Util.chdir(backup_path)
-            Util.copy_files(self.out_dir, ".")
-            shutil.rmtree("out")
-            Util.chdir(self.root_dir)
+            shutil.copytree(f'{backup_path}/{self.out_dir}', backup_path, dirs_exist_ok=True, symlinks=False, ignore_dangling_symlinks=True)
+            shutil.rmtree(f'{backup_path}/out')
 
     def run(self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1):
         if rev not in ["out", "backup"]:
@@ -455,7 +442,6 @@ class Project(Program):
                 # elif combo == "2.0.1":
                 #    TestExpectation.update("webgl2_cts_tests", target_rev_dir)
 
-                Util.chdir(project_rev_dir)
                 run_args = f"--browser=release_{self.target_cpu}"
 
                 if run_dry:
@@ -509,7 +495,7 @@ class Project(Program):
                     run_dir = project_rev_dir
             else:
                 run_dir = project_rev_dir
-            Util.chdir(run_dir)
+            Util.chdir(run_dir, verbose=True)
 
             timer = Timer()
             Util.info(cmd)

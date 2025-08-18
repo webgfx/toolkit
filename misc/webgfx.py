@@ -167,11 +167,14 @@ examples:
             else:
                 self.run_rev = "out"
         if args.run_jobs == 0:
-            _, _, _, _, vendor_id = Util.get_gpu_info()
-            if vendor_id == Util.VENDOR_ID_INTEL:
+            if args.run_dry:
                 self.run_jobs = 1
             else:
-                self.run_jobs = 4
+                _, _, _, _, vendor_id = Util.get_gpu_info()
+                if vendor_id == Util.VENDOR_ID_INTEL:
+                    self.run_jobs = 1
+                else:
+                    self.run_jobs = 4
         else:
             self.run_jobs = args.run_jobs
 
@@ -231,7 +234,7 @@ examples:
 
     def run(self, project, target):
         if self.run_combo == "all":
-            if target == "webgpu":
+            if target in ["dawn","webgpu"]:
                 combos = [0]
             else:
                 combos = []
