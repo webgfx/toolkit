@@ -126,13 +126,13 @@ class Webgfx(Program):
             default=1000,
             type=int,
         )
+        parser.add_argument("--upload", dest="upload", help="upload", action="store_true")
+        parser.add_argument("--download", dest="download", help="download", action="store_true")
 
         parser.add_argument("--batch", dest="batch", help="batch", action="store_true")
         parser.add_argument("--email", dest="email", help="email", action="store_true")
         parser.add_argument("--browser-dir", dest="browser_dir", help="browser dir", default="cr")
-
-        parser.add_argument("--upload", dest="upload", help="upload", action="store_true")
-        parser.add_argument("--download", dest="download", help="download", action="store_true")
+        parser.add_argument("--is-debug", dest="is_debug", help="is debug", action="store_true")
 
         parser.epilog = """
 examples:
@@ -206,9 +206,15 @@ examples:
         has_chromium_backup = False
         for target in self.targets:
             if target in ['webgl', 'webgpu']:
-                project = Project(root_dir=f'{self.root_dir}/{self.browser_dir}', result_dir=self.result_dir)
+                project = Project(
+                    root_dir=f'{self.root_dir}/{self.browser_dir}',
+                    result_dir=self.result_dir,
+                    is_debug=self.args.is_debug,
+                )
             else:
-                project = Project(root_dir=f'{self.root_dir}/{target}', result_dir=self.result_dir)
+                project = Project(
+                    root_dir=f'{self.root_dir}/{target}', result_dir=self.result_dir, is_debug=self.args.is_debug
+                )
 
             if args.sync or args.batch:
                 project.sync()
@@ -234,7 +240,7 @@ examples:
 
     def run(self, project, target):
         if self.run_combo == "all":
-            if target in ["dawn","webgpu"]:
+            if target in ["dawn", "webgpu"]:
                 combos = [0]
             else:
                 combos = []
