@@ -294,8 +294,6 @@ class Project(Program):
             else:
                 src_files.append(f"{self.out_dir}/{tmp_file}")
 
-        # print(src_files)
-        # exit(0)
         # Add extra files
         src_files += [
             # f"{self.out_dir}/args.gn",
@@ -348,6 +346,9 @@ class Project(Program):
                 expanded_src_files.append(src_file)
 
         src_files = expanded_src_files
+        #print(src_files)
+        #exit(0)
+
         src_file_count = len(src_files)
         for index, src_file in enumerate(src_files):
             dst_file = f"{backup_path}/{src_file}"
@@ -358,9 +359,6 @@ class Project(Program):
                 continue
 
             Util.ensure_dir(os.path.dirname(dst_file))
-            if os.path.isdir(src_file) or '*' in src_file:
-                dst_file = os.path.dirname(dst_file.rstrip("/"))
-
             Util.info(f"[{index + 1}/{src_file_count}] {src_file}")
 
             try:
