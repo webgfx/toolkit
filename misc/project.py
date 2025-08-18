@@ -265,7 +265,6 @@ class Project(Program):
                     "dbg",
                     "libEGL",
                     "libGLESv2",
-                    "d3dcompiler_47",
                 ]
             )
 
