@@ -243,8 +243,6 @@ class Project(Program):
             exclude_files.extend(
                 [
                     "locales",
-                    "gen/third_party/dawn/third_party/webgpu-cts",
-                    "gen/third_party/dawn/webgpu-cts",
                     "gen/third_party/devtools-frontend/src/front_end",
                     "gen/third_party/devtools-frontend/src/inspector_overlay",
                     "obj/",
@@ -265,6 +263,14 @@ class Project(Program):
                     "dbg",
                     "libEGL",
                     "libGLESv2",
+                ]
+            )
+
+        if 'webgl' in targets or 'webgpu' in targets:
+            exclude_files.extend(
+                [
+                    "gen/third_party/dawn/third_party/webgpu-cts",
+                    "gen/third_party/dawn/webgpu-cts",
                 ]
             )
 
@@ -299,12 +305,11 @@ class Project(Program):
         if "chrome" in targets:
             src_files += [
                 f"{self.out_dir}/locales/*.pak",
-                f"{self.out_dir}/gen/third_party/dawn/third_party/webgpu-cts/",
-                f"{self.out_dir}/gen/third_party/dawn/webgpu-cts",
                 f"{self.out_dir}/gen/third_party/devtools-frontend/src/front_end",
                 f"{self.out_dir}/gen/third_party/devtools-frontend/src/inspector_overlay",
                 f"{self.out_dir}/pyproto/google/protobuf",
             ]
+
             # if Util.HOST_OS == Util.WINDOWS:
             #    src_files += [
             #        "infra/config/generated/builders/try/dawn-win10-x64-deps-rel/targets/chromium.dawn.json",
@@ -315,6 +320,12 @@ class Project(Program):
             #        "infra/config/generated/builders/try/dawn-linux-x64-deps-rel/targets/chromium.dawn.json",
             #        "infra/config/generated/builders/try/gpu-fyi-try-linux-intel-rel/targets/chromium.gpu.fyi.json",
             #    ]
+
+        if 'webgpu' in targets:
+            src_files += [
+                f"{self.out_dir}/gen/third_party/dawn/third_party/webgpu-cts/",
+                f"{self.out_dir}/gen/third_party/dawn/webgpu-cts",
+            ]
 
         # handle src_files with glob patterns
         expanded_src_files = []

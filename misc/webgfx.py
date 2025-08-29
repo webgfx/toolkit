@@ -205,7 +205,7 @@ examples:
 
         has_chromium_backup = False
         for target in self.targets:
-            if target in ['webgl', 'webgpu']:
+            if target in ['webgl', 'webgpu', 'chrome']:
                 project = Project(
                     root_dir=f'{self.root_dir}/{self.browser_dir}',
                     result_dir=self.result_dir,
