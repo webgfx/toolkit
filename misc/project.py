@@ -166,10 +166,14 @@ class Project(Program):
         os.system(cmd)
 
     def build(self, target):
-        build_target = self.BUILD_TARGET_DICT[target]
-        if self.project == "chromium":
-            build_target += ' chrome'
-        cmd = f'autoninja {build_target} -C {self.out_dir}'
+        build_targets = []
+        if target in self.BUILD_TARGET_DICT.keys():
+            build_targets.append(self.BUILD_TARGET_DICT[target])
+        else:
+            build_targets.append(target)
+        if self.project == "chromium" and 'chrome' not in build_targets:
+            build_targets.append('chrome')
+        cmd = f'autoninja {" ".join(build_targets)} -C {self.out_dir}'
         Util.info(cmd)
         os.system(cmd)
 
