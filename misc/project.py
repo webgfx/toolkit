@@ -1,4 +1,4 @@
-import os
+﻿import os
 import re
 import shutil
 
@@ -465,7 +465,8 @@ class Project(Program):
                     elif target == "webgpu":
                         run_args += " --test-filter=*webgpu:api,operation,render_pipeline,pipeline_output_targets:color,attachments:*"
                 elif run_filter != "all":
-                    run_args += f' --test-filter=*{run_filter.replace('\"', '\\\"')}*'
+                    escaped_filter = run_filter.replace('"', '\\"')
+                    run_args += f" --test-filter=*{escaped_filter}*"
 
                 # if self.run_verbose:
                 #    run_args += " --verbose"
