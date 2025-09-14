@@ -483,7 +483,7 @@ class Project(Program):
                     cmd += f" --retry-limit 1 {run_args}"
                 result_file = ""
 
-                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
+                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu --ignore-gpu-blocklist"
                 if target == "webgpu" and combo == "d3d11":
                     extra_browser_args += (
                         " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
