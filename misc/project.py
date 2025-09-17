@@ -349,8 +349,8 @@ class Project(Program):
                 expanded_src_files.append(src_file)
 
         src_files = expanded_src_files
-        #print(src_files)
-        #exit(0)
+        # print(src_files)
+        # exit(0)
 
         src_file_count = len(src_files)
         for index, src_file in enumerate(src_files):
@@ -383,7 +383,13 @@ class Project(Program):
 
         # Postprocess the backup
         if self.project == 'dawn':
-            shutil.copytree(f'{backup_path}/{self.out_dir}', backup_path, dirs_exist_ok=True, symlinks=False, ignore_dangling_symlinks=True)
+            shutil.copytree(
+                f'{backup_path}/{self.out_dir}',
+                backup_path,
+                dirs_exist_ok=True,
+                symlinks=False,
+                ignore_dangling_symlinks=True,
+            )
             shutil.rmtree(f'{backup_path}/out')
 
     def run(self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1):
@@ -430,7 +436,7 @@ class Project(Program):
                     run_args = f"--gtest_filter=*{run_filter}*"
                 elif Util.HOST_OS == Util.WINDOWS:
                     if target == 'angle':
-                        run_args = "--gtest_filter=*D3D11*:-*SwiftShader*"
+                        run_args = "--gtest_filter=*/*D3D11*"
 
                 if target == "angle":
                     run_args += " --test-launcher-bot-mode"
@@ -821,7 +827,7 @@ class Project(Program):
 
             if lpac_success:
                 file_size = os.path.getsize(exe_path)
-                #Util.info(f"✓ Sandbox-compatible executable ready: {filename} ({file_size:,} bytes)")
+                # Util.info(f"✓ Sandbox-compatible executable ready: {filename} ({file_size:,} bytes)")
                 pass
             else:
                 Util.warning(f"⚠ LPAC permissions failed for: {filename}")
