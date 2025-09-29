@@ -206,14 +206,20 @@ examples:
         has_chromium_backup = False
         for target in self.targets:
             if target in ['webgl', 'webgpu', 'chrome']:
+                root_dir = f'{self.root_dir}/{self.browser_dir}'
+            elif target in ['angle', 'dawn']:
+                root_dir = f'{self.root_dir}/{target}'
+            else:
+                root_dir = self.root_dir
+            if target in ['webgl', 'webgpu', 'chrome']:
                 project = Project(
-                    root_dir=f'{self.root_dir}/{self.browser_dir}',
+                    root_dir=root_dir,
                     result_dir=self.result_dir,
                     is_debug=self.args.is_debug,
                 )
             else:
                 project = Project(
-                    root_dir=f'{self.root_dir}/{target}', result_dir=self.result_dir, is_debug=self.args.is_debug
+                    root_dir=root_dir, result_dir=self.result_dir, is_debug=self.args.is_debug
                 )
 
             if args.sync or args.batch:

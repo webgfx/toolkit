@@ -171,7 +171,7 @@ class Project(Program):
             build_targets.append(self.BUILD_TARGET_DICT[target])
         else:
             build_targets.append(target)
-        if self.project == "chromium" and 'chrome' not in build_targets:
+        if target in ['webgl', 'webgpu'] and 'chrome' not in build_targets:
             build_targets.append('chrome')
         cmd = f'autoninja {" ".join(build_targets)} -C {self.out_dir}'
         Util.info(cmd)
