@@ -157,7 +157,7 @@ class Project(Program):
             gn_args += f' target_cpu=\\"{self.target_cpu}\\"'
 
         if self.project == "dawn" and target_os == Util.WINDOWS:
-            gn_args += " dawn_use_swiftshader=false dawn_enable_vulkan=false"
+            gn_args += " dawn_use_swiftshader=false"
             # Below gn args couldn't be set
             # gn_args += ' dawn_supports_glfw_for_windowing=false dawn_use_glfw=false dawn_use_windows_ui=false tint_build_cmd_tools=false tint_build_tests=false'
 
@@ -417,7 +417,7 @@ class Project(Program):
         elif target == 'angle':
             all_combos = ["d3d11"]
         elif target == 'dawn':
-            all_combos = ["d3d12", "d3d11"]
+            all_combos = ["d3d12", "d3d11", "vulkan"]
 
         if combos == []:
             combos = [i for i in range(len(all_combos))]
@@ -444,6 +444,12 @@ class Project(Program):
                 if target == 'dawn':
                     result_file = f"{self.result_dir}/{target}-{combo}.json"
                     run_args += f" --gtest_output=json:{result_file} --enable-backend-validation={validation} --backend={combo} --exclusive-device-type-preference=discrete,integrated"
+
+                    _, _, _, device_id, _ = Util.get_gpu_info()
+                    # 0C36: Qualcomm 8380
+                    if device_id in ['0C36']:
+                        run_args += " --test-launcher-bot-mode"
+
                     # cmd += ' --run-suppressed-tests'
                     # for output, Chrome build uses --gtest_output=json:%s, standalone build uses --test-launcher-summary-output=%s
 
