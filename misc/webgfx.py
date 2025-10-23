@@ -141,7 +141,7 @@ examples:
 {0} {1} --batch --target dawn
 {0} {1} --target angle --run --run-filter EXTBlendFuncExtendedDrawTest
 {0} {1} --target webgl --run --run-combo 2
-{0} {1} --target dawn_perf_tests --root-dir d:\r\dawn --makefile --build
+{0} {1} --target dawn_perf_tests --root-dir d:/r/dawn --makefile --build
 """.format(
             Util.PYTHON, parser.prog
         )
