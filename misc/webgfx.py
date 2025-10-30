@@ -131,7 +131,6 @@ class Webgfx(Program):
 
         parser.add_argument("--batch", dest="batch", help="batch", action="store_true")
         parser.add_argument("--email", dest="email", help="email", action="store_true")
-        parser.add_argument("--browser-dir", dest="browser_dir", help="browser dir", default="cr")
         parser.add_argument("--is-debug", dest="is_debug", help="is debug", action="store_true")
 
         parser.epilog = """
@@ -149,7 +148,6 @@ examples:
         super().__init__(parser)
         args = self.args
 
-        self.browser_dir = args.browser_dir
         # strip the ending "\"
         root_dir = self.root_dir.strip("\\")
         self.result_dir = f"{root_dir}/result/{self.timestamp}"
@@ -206,22 +204,16 @@ examples:
 
         has_chromium_backup = False
         for target in self.targets:
-            if target in ['webgl', 'webgpu', 'chrome']:
-                root_dir = f'{self.root_dir}/{self.browser_dir}'
+            if 'cr' in root_dir or 'edge' in root_dir:
+                repo_dir = root_dir
+            elif target in ['webgl', 'webgpu', 'chrome']:
+                repo_dir = f'{root_dir}/cr'
             elif target in ['angle', 'dawn']:
-                root_dir = f'{self.root_dir}/{target}'
+                repo_dir = f'{root_dir}/{target}'
             else:
-                root_dir = self.root_dir
-            if target in ['webgl', 'webgpu', 'chrome']:
-                project = Project(
-                    root_dir=root_dir,
-                    result_dir=self.result_dir,
-                    is_debug=self.args.is_debug,
-                )
-            else:
-                project = Project(
-                    root_dir=root_dir, result_dir=self.result_dir, is_debug=self.args.is_debug
-                )
+                repo_dir = root_dir
+
+            project = Project(root_dir=repo_dir, result_dir=self.result_dir, is_debug=self.args.is_debug)
 
             if args.sync or args.batch:
                 project.sync()
