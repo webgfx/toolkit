@@ -141,6 +141,7 @@ examples:
 {0} {1} --target angle --run --run-filter EXTBlendFuncExtendedDrawTest
 {0} {1} --target webgl --run --run-combo 2
 {0} {1} --target dawn_perf_tests --root-dir d:/r/dawn --makefile --build
+{0} {1} --target gl_unittests --root-dir d:/r/cr --makefile --build --backup
 """.format(
             Util.PYTHON, parser.prog
         )

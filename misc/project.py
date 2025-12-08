@@ -27,6 +27,7 @@ class Project(Program):
         "webgpu_blink_web_tests": "//:webgpu_blink_web_tests",
         "webgl": "//chrome/test:telemetry_gpu_integration_test",
         "webgpu": "//chrome/test:telemetry_gpu_integration_test",
+        "gl_unittests": "//ui/gl:gl_unittests",
     }
     SEPARATOR = ": "
 
