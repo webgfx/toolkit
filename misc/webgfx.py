@@ -278,6 +278,8 @@ examples:
             summary += result_str
             if result.pass_fail:
                 result_str += "\n[PASS_FAIL]\n%s\n\n" % "\n".join(result.pass_fail[: self.args.report_max_fail])
+            if result.fail_pass:
+                result_str += "\n[FAIL_PASS]\n%s\n\n" % "\n".join(result.fail_pass[: self.args.report_max_fail])
             details += result_str
 
         Util.info(details)
