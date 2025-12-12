@@ -218,6 +218,8 @@ class Project(Program):
                 .rstrip("\n")
                 .split("\n")
             )
+            if target_files[0].startswith("WARNING"):
+                target_files = target_files[1:]
             tmp_files = Util.union_list(tmp_files, target_files)
 
         exclude_files = []
@@ -268,6 +270,7 @@ class Project(Program):
                     "dbg",
                     "libEGL",
                     "libGLESv2",
+                    "d3dcompiler_47.dll",
                 ]
             )
 
