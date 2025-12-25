@@ -413,7 +413,7 @@ class Project(Program):
 
         if target == "webgl":
             if Util.HOST_OS == Util.WINDOWS:
-                all_combos = ["1.0.3", "2.0.1"]
+                all_combos = ["1.0.4", "2.0.1"]
             elif Util.HOST_OS in [Util.LINUX, Util.DARWIN]:
                 all_combos = ["2.0.1"]
         elif target == "webgpu":
@@ -467,7 +467,7 @@ class Project(Program):
 
             elif target in ["webgl", "webgpu"]:
                 # Locally update related conformance_expectations.txt
-                # if combo == "1.0.3":
+                # if combo == "1.0.4":
                 #    TestExpectation.update("webgl_cts_tests", target_rev_dir)
                 # elif combo == "2.0.1":
                 #    TestExpectation.update("webgl2_cts_tests", target_rev_dir)
