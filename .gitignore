@@ -2,3 +2,5 @@
 *.swp
 ignore/
 test.py
+webgfx/result/
+webgfx/warp/
