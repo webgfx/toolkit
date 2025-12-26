@@ -81,15 +81,22 @@ examples:
         os.chdir(run_dir)
 
         try:
-            result = subprocess.run(
+            # Use Popen to show output in real-time
+            process = subprocess.Popen(
                 cmd,
                 shell=True,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
-                timeout=3600,  # 1 hour timeout
             )
-            output = result.stdout + result.stderr
-            print(output)  # Display output
+
+            output_lines = []
+            for line in process.stdout:
+                print(line, end='')  # Display output in real-time
+                output_lines.append(line)
+
+            process.wait()
+            output = ''.join(output_lines)
 
             # Parse the report output for PASS_FAIL failures
             self._parse_report_output(output, warp_type)
@@ -183,21 +190,46 @@ examples:
         new_failures = set(self.results['new']['failures'])
 
         regressions = new_failures - old_failures
-        fixes = old_failures - new_failures
+        improvements = old_failures - new_failures
+        persistent_failures = old_failures & new_failures
+
+        if old_failures:
+            report.append('-' * 60)
+            report.append(f'Old WARP Failures ({len(old_failures)} tests):')
+            report.append('-' * 60)
+            for test in sorted(old_failures):
+                report.append(f'  {test}')
+            report.append('')
+
+        if new_failures:
+            report.append('-' * 60)
+            report.append(f'New WARP Failures ({len(new_failures)} tests):')
+            report.append('-' * 60)
+            for test in sorted(new_failures):
+                report.append(f'  {test}')
+            report.append('')
 
         if regressions:
             report.append('-' * 60)
-            report.append(f'Regressions ({len(regressions)} tests failed in new WARP but passed in old):')
+            report.append(f'Regressions ({len(regressions)} tests passed in old WARP but failed in new):')
             report.append('-' * 60)
             for test in sorted(regressions):
                 report.append(f'  {test}')
             report.append('')
 
-        if fixes:
+        if persistent_failures:
             report.append('-' * 60)
-            report.append(f'Fixes ({len(fixes)} tests passed in new WARP but failed in old):')
+            report.append(f'Persistent Failures ({len(persistent_failures)} tests failed in both old and new WARP):')
             report.append('-' * 60)
-            for test in sorted(fixes):
+            for test in sorted(persistent_failures):
+                report.append(f'  {test}')
+            report.append('')
+
+        if improvements:
+            report.append('-' * 60)
+            report.append(f'Improvements ({len(improvements)} tests failed in old WARP but passed in new):')
+            report.append('-' * 60)
+            for test in sorted(improvements):
                 report.append(f'  {test}')
             report.append('')
 

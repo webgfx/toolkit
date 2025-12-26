@@ -501,7 +501,7 @@ class Project(Program):
                     cmd += f" --retry-limit 1 {run_args}"
                 result_file = ""
 
-                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu --ignore-gpu-blocklist"
+                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
                 if target == "webgpu" and combo == "d3d11":
                     extra_browser_args += (
                         " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
@@ -513,8 +513,9 @@ class Project(Program):
                     if target == "webgl":
                         extra_browser_args += " --use-angle=d3d11"
                     result_file = f"{self.result_dir}/{target}-{combo}.log"
-                # warp
-                # extra_browser_args += " --enable-features=AllowD3D11WarpFallback --disable-gpu"
+
+                if warp:
+                    extra_browser_args += " --enable-features=AllowD3D11WarpFallback --disable-gpu"
                 cmd += f' --extra-browser-args="{extra_browser_args}"'
                 cmd += f" --write-full-results-to {result_file}"
 
