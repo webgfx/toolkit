@@ -41,6 +41,7 @@ class WarpRegression:
         parser.add_argument('--target', dest='target', help='target name', required=True)
         parser.add_argument('--run-filter', dest='run_filter', help='test filter', default='*')
         parser.add_argument('--run-combo', dest='run_combo', help='run combo', default='all')
+        parser.add_argument('--run-dry', dest='run_dry', help='dry run', action='store_true')
         parser.add_argument('--email', dest='email', help='send email with results', action='store_true')
 
         parser.epilog = """
@@ -54,6 +55,7 @@ examples:
         self.target = args.target
         self.filter = args.run_filter
         self.run_combo = args.run_combo
+        self.run_dry = args.run_dry
         self.send_email = args.email
 
         self.results = {
@@ -69,6 +71,8 @@ examples:
             cmd += f' --run-filter {self.filter}'
         if self.run_combo and self.run_combo != 'all':
             cmd += f' --run-combo {self.run_combo}'
+        if self.run_dry:
+            cmd += ' --run-dry'
 
         Util.info(f'Running: {cmd} (in {run_dir})')
 
@@ -214,6 +218,7 @@ examples:
         else:
             subject += ' - No Regressions'
 
+        Util.info(f'Email subject: {subject}')
         Util.send_email(subject=subject, content=report)
 
     def run(self):

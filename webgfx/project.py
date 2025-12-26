@@ -492,7 +492,7 @@ class Project(Program):
                 run_args += f" --jobs={jobs} --stable-jobs"
                 cmd = "vpython3.bat content/test/gpu/run_gpu_integration_test.py"
                 if target == "webgl":
-                    cmd += f" webgl{combo[0]}_conformance {run_args} --webgl-conformance-version={combo} --retry-limit 1"
+                    cmd += f" webgl{combo[0]}_conformance {run_args} --webgl-conformance-version={combo}"
                 elif target == "webgpu":
                     if combo == "d3d11":
                         cmd += f" webgpu_compat_cts"
