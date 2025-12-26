@@ -59,12 +59,12 @@ class Project(Program):
         self.run_log = f"{self.result_dir}/run.log"
 
         if project == "chromium":
-            tmp_dir = f"{root_dir}/src"
+            self.repo_dir = f"{root_dir}/src"
         else:
-            tmp_dir = root_dir
+            self.repo_dir = root_dir
 
-        if os.path.exists(tmp_dir):
-            Util.chdir(tmp_dir)
+        if os.path.exists(self.repo_dir):
+            Util.chdir(self.repo_dir)
 
     def sync(self, verbose=False):
         self._execute("git pull --no-recurse-submodules", exit_on_error=self.exit_on_error)
@@ -400,8 +400,6 @@ class Project(Program):
         if rev not in ["out", "backup"]:
             Util.impossible()
 
-        project_dir = self.root_dir
-
         # Copy WARP DLL if specified, or remove it if not
         if warp in ['old', 'new']:
             self._copy_warp_dll(warp)
@@ -409,10 +407,7 @@ class Project(Program):
             self._remove_warp_dll()
 
         if rev == "out":
-            if target in ["angle", "dawn"]:
-                project_rev_dir = project_dir
-            else:
-                project_rev_dir = f"{project_dir}/src"
+            project_rev_dir = self.repo_dir
         else:
             project_rev_name, _ = Util.get_backup_dir(self.project_backup_dir, "latest")
             project_rev_dir = f"{self.project_backup_dir}/{project_rev_name}"
@@ -506,7 +501,7 @@ class Project(Program):
                     cmd += f" --retry-limit 1 {run_args}"
                 result_file = ""
 
-                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
+                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu --ignore-gpu-blocklist"
                 if target == "webgpu" and combo == "d3d11":
                     extra_browser_args += (
                         " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
@@ -543,13 +538,13 @@ class Project(Program):
             # Postprocess the result
             if target == "angle":
                 if rev == "out":
-                    output_file = f"{project_dir}/out/release_{self.target_cpu}/output.json"
-                    # TestExpectation.update('angle_end2end_tests', f'{project_dir}')
+                    output_file = f"{self.repo_dir}/out/release_{self.target_cpu}/output.json"
+                    # TestExpectation.update('angle_end2end_tests', f'{self.repo_dir}')
                 else:
                     output_file = (
                         f"{self.project_backup_dir}/{project_rev_name}/out/release_{self.target_cpu}/output.json"
                     )
-                    # TestExpectation.update("angle_end2end_tests", f"{project_dir}/backup/{project_rev_dir}")
+                    # TestExpectation.update("angle_end2end_tests", f"{self.repo_dir}/backup/{project_rev_dir}")
 
                 result_file = f"{self.result_dir}/{target}-{combo}.json"
                 if os.path.exists(output_file):
@@ -788,7 +783,7 @@ class Project(Program):
         script_dir = os.path.dirname(os.path.abspath(__file__))
         warp_src_dir = f'{script_dir}/warp/{warp}'
         src = f'{warp_src_dir}/{warp_dll}'
-        dst = f'{self.root_dir}/{self.out_dir}/{warp_dll}'
+        dst = f'{self.repo_dir}/{self.out_dir}/{warp_dll}'
 
         if not os.path.exists(src):
             Util.error(f'WARP DLL not found: {src}')
@@ -802,7 +797,7 @@ class Project(Program):
         Remove WARP DLL from the output directory if it exists.
         """
         warp_dll = 'd3d10warp.dll'
-        dst = f'{self.root_dir}/{self.out_dir}/{warp_dll}'
+        dst = f'{self.repo_dir}/{self.out_dir}/{warp_dll}'
 
         if os.path.exists(dst):
             Util.info(f'Removing WARP DLL: {dst}')

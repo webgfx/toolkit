@@ -38,8 +38,9 @@ from util.base import Util
 class WarpRegression:
     def __init__(self):
         parser = argparse.ArgumentParser(description='WARP Regression Test')
-        parser.add_argument('--target', dest='target', help='target name (angle)', choices=['angle'], required=True)
+        parser.add_argument('--target', dest='target', help='target name', required=True)
         parser.add_argument('--run-filter', dest='run_filter', help='test filter', default='*')
+        parser.add_argument('--run-combo', dest='run_combo', help='run combo', default='all')
         parser.add_argument('--email', dest='email', help='send email with results', action='store_true')
 
         parser.epilog = """
@@ -52,6 +53,7 @@ examples:
         args = parser.parse_args()
         self.target = args.target
         self.filter = args.run_filter
+        self.run_combo = args.run_combo
         self.send_email = args.email
 
         self.results = {
@@ -59,15 +61,14 @@ examples:
             'new': {'passed': 0, 'failed': 0, 'skipped': 0, 'failures': []},
         }
 
-    def _run_angle_test(self, warp_type):
-        """Run angle_end2end_tests with specified WARP using webgfx.py --warp"""
-        Util.info(f'Running angle_end2end_tests with {warp_type} WARP...')
-
+    def _run_test(self, warp_type):
         # Run webgfx.py with --warp option from d:\r
         run_dir = 'd:/r'
         cmd = f'python3.exe webgfx.py --target {self.target} --run --warp {warp_type}'
         if self.filter and self.filter != '*':
             cmd += f' --run-filter {self.filter}'
+        if self.run_combo and self.run_combo != 'all':
+            cmd += f' --run-combo {self.run_combo}'
 
         Util.info(f'Running: {cmd} (in {run_dir})')
 
@@ -104,6 +105,12 @@ examples:
         in_pass_fail_section = False
         for line in output.split('\n'):
             line = line.strip()
+
+            # [INFO] means we've exited the PASS_FAIL section
+            if line.startswith('[INFO]'):
+                in_pass_fail_section = False
+                continue
+
             if line == '[PASS_FAIL]':
                 in_pass_fail_section = True
                 continue
@@ -213,12 +220,11 @@ examples:
         """Run the regression test"""
         Util.info(f'Starting WARP regression test for: {self.target}')
 
-        if self.target == 'angle':
-            # Run with old WARP
-            self._run_angle_test('old')
+        # Run with old WARP
+        self._run_test('old')
 
-            # Run with new WARP
-            self._run_angle_test('new')
+        # Run with new WARP
+        self._run_test('new')
 
         # Generate report
         report = self._generate_report()
