@@ -171,7 +171,7 @@ examples:
                 self.run_jobs = 1
             else:
                 _, _, _, _, vendor_id = Util.get_gpu_info()
-                if vendor_id == Util.VENDOR_ID_INTEL:
+                if vendor_id in [Util.VENDOR_ID_INTEL]:
                     self.run_jobs = 1
                 else:
                     self.run_jobs = 4

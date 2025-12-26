@@ -487,10 +487,10 @@ class Project(Program):
                 # if self.run_verbose:
                 #    run_args += " --verbose"
 
-                run_args += f" --jobs={jobs} --disable-log-uploads --stable-jobs"
+                run_args += f" --jobs={jobs} --stable-jobs"
                 cmd = "vpython3.bat content/test/gpu/run_gpu_integration_test.py"
                 if target == "webgl":
-                    cmd += f" webgl{combo[0]}_conformance {run_args} --webgl-conformance-version={combo}"
+                    cmd += f" webgl{combo[0]}_conformance {run_args} --webgl-conformance-version={combo} --retry-limit 1"
                 elif target == "webgpu":
                     if combo == "d3d11":
                         cmd += f" webgpu_compat_cts"
@@ -499,7 +499,7 @@ class Project(Program):
                     cmd += f" --retry-limit 1 {run_args}"
                 result_file = ""
 
-                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu --ignore-gpu-blocklist"
+                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
                 if target == "webgpu" and combo == "d3d11":
                     extra_browser_args += (
                         " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
