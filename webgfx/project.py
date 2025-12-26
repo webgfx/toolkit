@@ -396,11 +396,18 @@ class Project(Program):
             )
             shutil.rmtree(f'{backup_path}/out')
 
-    def run(self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1):
+    def run(self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1, warp=None):
         if rev not in ["out", "backup"]:
             Util.impossible()
 
         project_dir = self.root_dir
+
+        # Copy WARP DLL if specified, or remove it if not
+        if warp in ['old', 'new']:
+            self._copy_warp_dll(warp)
+        else:
+            self._remove_warp_dll()
+
         if rev == "out":
             if target in ["angle", "dawn"]:
                 project_rev_dir = project_dir
@@ -772,6 +779,34 @@ class Project(Program):
             Util.error(f"Failed to extract archive {archive_path}: {e}")
         finally:
             Util.chdir(original_dir)
+
+    def _copy_warp_dll(self, warp):
+        """
+        Copy WARP DLL from warp/ folder to the output directory.
+        """
+        warp_dll = 'd3d10warp.dll'
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        warp_src_dir = f'{script_dir}/warp/{warp}'
+        src = f'{warp_src_dir}/{warp_dll}'
+        dst = f'{self.root_dir}/{self.out_dir}/{warp_dll}'
+
+        if not os.path.exists(src):
+            Util.error(f'WARP DLL not found: {src}')
+            return
+
+        Util.info(f'Copying {warp} WARP DLL from {src} to {dst}')
+        shutil.copy2(src, dst)
+
+    def _remove_warp_dll(self):
+        """
+        Remove WARP DLL from the output directory if it exists.
+        """
+        warp_dll = 'd3d10warp.dll'
+        dst = f'{self.root_dir}/{self.out_dir}/{warp_dll}'
+
+        if os.path.exists(dst):
+            Util.info(f'Removing WARP DLL: {dst}')
+            os.remove(dst)
 
     def _apply_chrome_sandbox_permissions(self, exe_path):
         """
