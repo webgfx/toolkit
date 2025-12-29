@@ -90,6 +90,7 @@ class Project(Program):
                 cmd += " --is-component-build=true"
             if not local:
                 cmd += " --use-remoteexec"
+            cmd += ' --proprietary_codecs=true --ffmpeg_branding=\\"Chrome\\"'
             Util.info(cmd)
             os.system(cmd)
             return
@@ -429,6 +430,10 @@ class Project(Program):
             all_combos = ["d3d12", "d3d11", "vulkan"]
         elif target == 'contextlost':
             all_combos = ["d3d11"]
+        elif target == 'webcodecs':
+            all_combos = ["d3d11"]
+        elif target == 'pixel':
+            all_combos = ["d3d11"]
 
         if combos == []:
             combos = [i for i in range(len(all_combos))]
@@ -472,7 +477,7 @@ class Project(Program):
                 if run_args:
                     cmd += f' {run_args}'
 
-            elif target in ["webgl", "webgpu", "contextlost"]:
+            elif target in ["webgl", "webgpu", "contextlost", "webcodecs", "pixel"]:
                 # Locally update related conformance_expectations.txt
                 # if combo == "1.0.4":
                 #    TestExpectation.update("webgl_cts_tests", target_rev_dir)
@@ -506,6 +511,10 @@ class Project(Program):
                     cmd += f" --retry-limit 1 {run_args}"
                 elif target == "contextlost":
                     cmd += " context_lost"
+                elif target == "webcodecs":
+                    cmd += " webcodecs"
+                elif target == "pixel":
+                    cmd += " pixel"
                 result_file = ""
 
                 extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
@@ -514,6 +523,10 @@ class Project(Program):
                         " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
                     )
                 elif target == "contextlost":
+                    extra_browser_args += " --js-flags=--expose-gc --use-cmd-decoder=passthrough --use-gl=angle"
+                elif target == "webcodecs":
+                    extra_browser_args += " --js-flags=--expose-gc"
+                elif target == "pixel":
                     extra_browser_args += " --js-flags=--expose-gc --use-cmd-decoder=passthrough --use-gl=angle"
 
                 if Util.HOST_OS == Util.LINUX:
