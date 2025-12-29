@@ -133,6 +133,7 @@ class Webgfx(Program):
         parser.add_argument("--batch", dest="batch", help="batch", action="store_true")
         parser.add_argument("--email", dest="email", help="email", action="store_true")
         parser.add_argument("--is-debug", dest="is_debug", help="is debug", action="store_true")
+        parser.add_argument("--is-component-build", dest="is_component_build", help="is component build", action="store_true")
 
         parser.epilog = """
 examples:
@@ -208,7 +209,7 @@ examples:
         for target in self.targets:
             if 'cr' in root_dir or 'edge' in root_dir:
                 repo_dir = root_dir
-            elif target in ['webgl', 'webgpu', 'chrome']:
+            elif target in ['webgl', 'webgpu', 'chrome', 'contextlost']:
                 repo_dir = f'{root_dir}/cr'
             elif target in ['angle', 'dawn']:
                 repo_dir = f'{root_dir}/{target}'
@@ -220,7 +221,7 @@ examples:
             if args.sync or args.batch:
                 project.sync()
             if args.makefile or args.batch:
-                project.makefile(local=args.makefile_local)
+                project.makefile(is_component_build=args.is_component_build, local=args.makefile_local)
             if args.build or args.batch:
                 project.build(target)
             if args.backup or args.batch:

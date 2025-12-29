@@ -86,6 +86,8 @@ class Project(Program):
     ):
         if self.project == 'chromium':
             cmd = f'autogn {self.target_cpu} {self.build_type} -a {self.root_dir}'
+            if is_component_build:
+                cmd += " --is-component-build=true"
             if not local:
                 cmd += " --use-remoteexec"
             Util.info(cmd)
@@ -96,12 +98,13 @@ class Project(Program):
             if self.is_debug:
                 symbol_level = 2
             else:
-                symbol_level = 0
+                symbol_level = 2
 
         if local:
             gn_args = ""
         else:
             gn_args = "use_remoteexec=true"
+
         if self.is_debug:
             gn_args += " is_debug=true"
         else:
@@ -424,6 +427,8 @@ class Project(Program):
             all_combos = ["d3d11"]
         elif target == 'dawn':
             all_combos = ["d3d12", "d3d11", "vulkan"]
+        elif target == 'contextlost':
+            all_combos = ["d3d11"]
 
         if combos == []:
             combos = [i for i in range(len(all_combos))]
@@ -467,7 +472,7 @@ class Project(Program):
                 if run_args:
                     cmd += f' {run_args}'
 
-            elif target in ["webgl", "webgpu"]:
+            elif target in ["webgl", "webgpu", "contextlost"]:
                 # Locally update related conformance_expectations.txt
                 # if combo == "1.0.4":
                 #    TestExpectation.update("webgl_cts_tests", target_rev_dir)
@@ -499,6 +504,8 @@ class Project(Program):
                     else:
                         cmd += f" webgpu_cts"
                     cmd += f" --retry-limit 1 {run_args}"
+                elif target == "contextlost":
+                    cmd += " context_lost"
                 result_file = ""
 
                 extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
@@ -506,6 +513,8 @@ class Project(Program):
                     extra_browser_args += (
                         " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
                     )
+                elif target == "contextlost":
+                    extra_browser_args += " --js-flags=--expose-gc --use-cmd-decoder=passthrough --use-gl=angle"
 
                 if Util.HOST_OS == Util.LINUX:
                     result_file = f"{self.result_dir}/{target}-{combo}.log"
