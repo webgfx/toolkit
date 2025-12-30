@@ -209,7 +209,7 @@ examples:
         for target in self.targets:
             if 'cr' in root_dir or 'edge' in root_dir:
                 repo_dir = root_dir
-            elif target in ['webgl', 'webgpu', 'chrome', 'contextlost', 'webcodecs', 'pixel']:
+            elif target in ['webgl', 'webgpu', 'chrome', 'context_lost', 'webcodecs', 'pixel', 'trace']:
                 repo_dir = f'{root_dir}/cr'
             elif target in ['angle', 'dawn']:
                 repo_dir = f'{root_dir}/{target}'
