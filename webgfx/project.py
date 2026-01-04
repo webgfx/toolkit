@@ -515,7 +515,9 @@ class Project(Program):
                 result_file = ""
 
                 extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
-                if target == "webgpu" and combo == "d3d11":
+                if target == "webgl":
+                    extra_browser_args += " --use-cmd-decoder=passthrough --use-gl=angle --use-angle=d3d11"
+                elif target == "webgpu" and combo == "d3d11":
                     extra_browser_args += (
                         " --enable-unsafe-webgpu --use-webgpu-adapter=d3d11 --enable-features=WebGPUCompatibilityMode"
                     )
@@ -531,8 +533,6 @@ class Project(Program):
                 if Util.HOST_OS == Util.LINUX:
                     result_file = f"{self.result_dir}/{target}-{combo}.log"
                 elif Util.HOST_OS == Util.WINDOWS:
-                    if target == "webgl":
-                        extra_browser_args += " --use-angle=d3d11"
                     result_file = f"{self.result_dir}/{target}-{combo}.log"
 
                 if warp:
