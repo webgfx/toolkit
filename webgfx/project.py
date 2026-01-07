@@ -400,7 +400,7 @@ class Project(Program):
             )
             shutil.rmtree(f'{backup_path}/out')
 
-    def run(self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1, warp=None):
+    def run(self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1, warp=None, index=0):
         if rev not in ["out", "backup"]:
             Util.impossible()
 
@@ -434,8 +434,8 @@ class Project(Program):
         if combos == []:
             combos = [i for i in range(len(all_combos))]
 
-        for index in combos:
-            combo = all_combos[index]
+        for idx in combos:
+            combo = all_combos[idx]
             # Prepare the cmd
             run_args = ""
             if target in ['angle', 'dawn']:
@@ -454,7 +454,7 @@ class Project(Program):
                     run_args += " --test-launcher-bot-mode"
 
                 if target == 'dawn':
-                    result_file = f"{self.result_dir}/{target}-{combo}.json"
+                    result_file = f"{self.result_dir}/{target}-{combo}-{index}.json"
                     run_args += f" --gtest_output=json:{result_file} --enable-backend-validation={validation} --backend={combo} --exclusive-device-type-preference=discrete,integrated"
 
                     _, _, _, device_id, _ = Util.get_gpu_info()
@@ -530,10 +530,7 @@ class Project(Program):
                 elif target == "trace":
                     extra_browser_args += " --js-flags=--expose-gc"
 
-                if Util.HOST_OS == Util.LINUX:
-                    result_file = f"{self.result_dir}/{target}-{combo}.log"
-                elif Util.HOST_OS == Util.WINDOWS:
-                    result_file = f"{self.result_dir}/{target}-{combo}.log"
+                result_file = f"{self.result_dir}/{target}-{combo}-{index}.log"
 
                 if warp:
                     extra_browser_args += " --enable-features=AllowD3D11WarpFallback --disable-gpu"
@@ -568,7 +565,7 @@ class Project(Program):
                     )
                     # TestExpectation.update("angle_end2end_tests", f"{self.repo_dir}/backup/{project_rev_dir}")
 
-                result_file = f"{self.result_dir}/{target}-{combo}.json"
+                result_file = f"{self.result_dir}/{target}-{combo}-{index}.json"
                 if os.path.exists(output_file):
                     shutil.move(output_file, result_file)
                 else:

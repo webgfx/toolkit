@@ -264,6 +264,7 @@ examples:
                 validation=self.args.run_dawn_validation,
                 jobs=self.run_jobs,
                 warp=self.args.warp,
+                index = i,
             )
 
     def report(self):
