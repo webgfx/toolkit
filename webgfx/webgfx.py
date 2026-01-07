@@ -117,6 +117,7 @@ class Webgfx(Program):
         )
         parser.add_argument("--run-jobs", dest="run_jobs", help="run jobs", default=0)
         parser.add_argument("--run-dry", dest="run_dry", help="dry run", action="store_true")
+        parser.add_argument("--repeat", dest="repeat", help="repeat tests n times", type=int, default=1)
         parser.add_argument("--warp", dest="warp", help="use WARP DLL (old or new)", choices=['old', 'new'], default=None)
 
         parser.add_argument("--report", dest="report", help="report")
@@ -179,6 +180,8 @@ examples:
                     self.run_jobs = 4
         else:
             self.run_jobs = args.run_jobs
+
+        self.run_repeat = args.repeat
 
         self.target_os = args.target_os
         if not self.target_os:
@@ -249,16 +252,19 @@ examples:
         else:
             combos = list(map(int, self.run_combo.split()))
 
-        project.run(
-            target=target,
-            combos=combos,
-            rev=self.run_rev,
-            run_dry=self.args.run_dry,
-            run_filter=self.run_filter,
-            validation=self.args.run_dawn_validation,
-            jobs=self.run_jobs,
-            warp=self.args.warp,
-        )
+        for i in range(self.run_repeat):
+            if self.run_repeat > 1:
+                Util.info(f"Running iteration {i + 1}/{self.run_repeat}")
+            project.run(
+                target=target,
+                combos=combos,
+                rev=self.run_rev,
+                run_dry=self.args.run_dry,
+                run_filter=self.run_filter,
+                validation=self.args.run_dawn_validation,
+                jobs=self.run_jobs,
+                warp=self.args.warp,
+            )
 
     def report(self):
         if self.args.report:
