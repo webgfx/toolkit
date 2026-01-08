@@ -532,7 +532,7 @@ class Project(Program):
 
                 result_file = f"{self.result_dir}/{target}-{combo}-{index}.log"
 
-                if warp:
+                if warp and target == 'webgl':
                     extra_browser_args += " --enable-features=AllowD3D11WarpFallback --disable-gpu"
                 cmd += f' --extra-browser-args="{extra_browser_args}"'
                 cmd += f" --write-full-results-to {result_file}"
