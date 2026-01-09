@@ -84,22 +84,22 @@ class Project(Program):
         symbol_level=-1,
         local=False,
     ):
+        if symbol_level == -1:
+            if self.is_debug:
+                symbol_level = 2
+            else:
+                symbol_level = 2
+
         if self.project == 'chromium':
             cmd = f'autogn {self.target_cpu} {self.build_type} -a {self.root_dir}'
             if is_component_build:
                 cmd += " --is-component-build=true"
             if not local:
                 cmd += " --use-remoteexec"
-            cmd += ' --proprietary_codecs=true --ffmpeg_branding=\\"Chrome\\"'
+            cmd += f' --proprietary_codecs=true --ffmpeg_branding=\\"Chrome\\" --symbol_level={symbol_level}'
             Util.info(cmd)
             os.system(cmd)
             return
-
-        if symbol_level == -1:
-            if self.is_debug:
-                symbol_level = 2
-            else:
-                symbol_level = 2
 
         if local:
             gn_args = ""
