@@ -118,7 +118,9 @@ class Webgfx(Program):
         parser.add_argument("--run-jobs", dest="run_jobs", help="run jobs", default=0)
         parser.add_argument("--run-dry", dest="run_dry", help="dry run", action="store_true")
         parser.add_argument("--repeat", dest="repeat", help="repeat tests n times", type=int, default=1)
-        parser.add_argument("--warp", dest="warp", help="use WARP DLL (old or new)", choices=['old', 'new'], default=None)
+        parser.add_argument(
+            "--warp", dest="warp", help="use WARP DLL (old or new)", choices=['old', 'new'], default=None
+        )
 
         parser.add_argument("--report", dest="report", help="report")
         parser.add_argument(
@@ -134,7 +136,9 @@ class Webgfx(Program):
         parser.add_argument("--batch", dest="batch", help="batch", action="store_true")
         parser.add_argument("--email", dest="email", help="email", action="store_true")
         parser.add_argument("--is-debug", dest="is_debug", help="is debug", action="store_true")
-        parser.add_argument("--is-component-build", dest="is_component_build", help="is component build", action="store_true")
+        parser.add_argument(
+            "--is-component-build", dest="is_component_build", help="is component build", action="store_true"
+        )
 
         parser.epilog = """
 examples:
@@ -145,6 +149,7 @@ examples:
 {0} {1} --target webgl --run --run-combo 2
 {0} {1} --target dawn_perf_tests --root-dir d:/r/dawn --makefile --build
 {0} {1} --target gl_unittests --root-dir d:/r/cr --makefile --build --backup
+{0} {1} --target webnn_graph_mojolpm_fuzzer --makefile --build --backup
 """.format(
             Util.PYTHON, parser.prog
         )
@@ -212,14 +217,28 @@ examples:
         for target in self.targets:
             if 'cr' in root_dir or 'edge' in root_dir:
                 repo_dir = root_dir
-            elif target in ['webgl', 'webgpu', 'chrome', 'context_lost', 'webcodecs', 'pixel', 'trace']:
+            elif target in [
+                'webgl',
+                'webgpu',
+                'chrome',
+                'context_lost',
+                'webcodecs',
+                'pixel',
+                'trace',
+                'webnn_graph_mojolpm_fuzzer',
+            ]:
                 repo_dir = f'{root_dir}/cr'
             elif target in ['angle', 'dawn']:
                 repo_dir = f'{root_dir}/{target}'
             else:
                 repo_dir = root_dir
 
-            project = Project(root_dir=repo_dir, result_dir=self.result_dir, is_debug=self.args.is_debug)
+            if target == "webnn_graph_mojolpm_fuzzer":
+                fuzzer = True
+            else:
+                fuzzer = False
+
+            project = Project(root_dir=repo_dir, result_dir=self.result_dir, is_debug=self.args.is_debug, fuzzer=fuzzer)
 
             if args.sync or args.batch:
                 project.sync()
@@ -264,7 +283,7 @@ examples:
                 validation=self.args.run_dawn_validation,
                 jobs=self.run_jobs,
                 warp=self.args.warp,
-                index = i,
+                index=i,
             )
 
     def report(self):

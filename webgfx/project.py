@@ -31,11 +31,15 @@ class Project(Program):
     }
     SEPARATOR = ": "
 
-    def __init__(self, root_dir, result_dir, is_debug=False):
+    def __init__(self, root_dir, result_dir, is_debug=False, fuzzer=False):
         super().__init__()
         project = os.path.basename(root_dir)
         # handle project chromium
         if "chromium" in project or "chrome" in project or "cr" in project or "edge" in project:
+            project = "chromium"
+
+        self.fuzzer = fuzzer
+        if fuzzer:
             project = "chromium"
         self.project = project
 
@@ -53,6 +57,9 @@ class Project(Program):
 
         self.is_debug = is_debug
         self.out_dir = f"out/{self.build_type}_{self.target_cpu}"
+        if self.fuzzer:
+            self.out_dir += "_fuzzer"
+
         self.exit_on_error = False
         self.root_dir = root_dir
         self.result_dir = result_dir
@@ -84,6 +91,20 @@ class Project(Program):
         symbol_level=-1,
         local=False,
     ):
+        if self.fuzzer:
+            # Revert to gn gen because autogn may not support enable_mojom_fuzzer arg
+            gn_args = 'dcheck_always_on=false enable_mojom_fuzzer=true is_asan=true is_component_build=false is_debug=false pdf_enable_xfa=true proprietary_codecs=true symbol_level=2 target_cpu=\\"x64\\" target_os=\\"win\\" use_libfuzzer=true use_reclient=false use_remoteexec=true use_siso=true'
+            gn_cmd = "gn"
+            if Util.HOST_OS == Util.WINDOWS:
+                gn_args += ' ffmpeg_branding=\\"Chrome\\"'
+            else:
+                gn_args += ' ffmpeg_branding="Chrome"'
+
+            cmd = f'{gn_cmd} gen {self.out_dir} --args="{gn_args}"'
+            Util.info(cmd)
+            os.system(cmd)
+            return
+
         if symbol_level == -1:
             if self.is_debug:
                 symbol_level = 2
@@ -96,7 +117,12 @@ class Project(Program):
                 cmd += " --is-component-build=true"
             if not local:
                 cmd += " --use-remoteexec"
-            cmd += f' --proprietary_codecs=true --ffmpeg_branding=\\"Chrome\\" --symbol_level={symbol_level}'
+            if dcheck:
+                cmd += " --dcheck_always_on=true"
+            else:
+                cmd += " --dcheck_always_on=false"
+
+            cmd += f' --proprietary_codecs=true --ffmpeg_branding=\\"Chrome\\" --symbol_level={symbol_level} --enable_nacl=false'
             Util.info(cmd)
             os.system(cmd)
             return
@@ -400,7 +426,9 @@ class Project(Program):
             )
             shutil.rmtree(f'{backup_path}/out')
 
-    def run(self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1, warp=None, index=0):
+    def run(
+        self, target, combos, rev, run_dry=False, run_filter="all", validation='disabled', jobs=1, warp=None, index=0
+    ):
         if rev not in ["out", "backup"]:
             Util.impossible()
 
@@ -515,7 +543,7 @@ class Project(Program):
                 result_file = ""
 
                 extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
-                #if target == "webgl":
+                # if target == "webgl":
                 #    extra_browser_args += " --use-cmd-decoder=passthrough --use-gl=angle --use-angle=d3d11"
                 if target == "webgpu" and combo == "d3d11":
                     extra_browser_args += (
@@ -533,9 +561,9 @@ class Project(Program):
                 result_file = f"{self.result_dir}/{target}-{combo}-{index}.log"
 
                 if warp and target == 'webgl':
-                    #extra_browser_args += " --use-angle=d3d11-warp"
+                    # extra_browser_args += " --use-angle=d3d11-warp"
                     extra_browser_args += " --enable-features=AllowD3D11WarpFallback --disable-gpu"
-                    #extra_browser_args += " --ignore-gpu-blocklist"
+                    # extra_browser_args += " --ignore-gpu-blocklist"
                 cmd += f' --extra-browser-args="{extra_browser_args}"'
                 cmd += f" --write-full-results-to {result_file}"
 
