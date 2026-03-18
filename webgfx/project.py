@@ -1,6 +1,7 @@
 ﻿import os
 import re
 import shutil
+import zipfile as zf
 
 from util.base import Util, Program, ChromiumRepo, Timer
 
@@ -82,6 +83,7 @@ class Project(Program):
 
     def makefile(
         self,
+        target,
         dcheck=True,
         is_component_build=False,
         treat_warning_as_error=True,
@@ -91,6 +93,9 @@ class Project(Program):
         symbol_level=-1,
         local=False,
     ):
+        if target == "webnn_fuzzer":
+            self._makefile_webnn_fuzzer()
+
         if self.fuzzer:
             # Revert to gn gen because autogn may not support enable_mojom_fuzzer arg
             gn_args = 'dcheck_always_on=false enable_mojom_fuzzer=true is_asan=true is_component_build=false is_debug=false pdf_enable_xfa=true proprietary_codecs=true symbol_level=2 target_cpu=\\"x64\\" target_os=\\"win\\" use_libfuzzer=true use_reclient=false use_remoteexec=true use_siso=true'
@@ -196,7 +201,56 @@ class Project(Program):
         Util.info(cmd)
         os.system(cmd)
 
+    def _makefile_webnn_fuzzer(self):
+        fuzzer_out_dir = "out/webnn_fuzzer"
+        seed_corpus_dir = "services/webnn/webnn_graph_mojolpm_fuzzer_seed_corpus"
+
+        # Step 1: Copy textprotos into seed_corpus directory
+        textprotos_src = f"{fuzzer_out_dir}/textprotos"
+        if os.path.exists(textprotos_src):
+            Util.info(f"Step 1: Copying textprotos from {textprotos_src} to {seed_corpus_dir}")
+            Util.ensure_dir(seed_corpus_dir)
+            for f in os.listdir(textprotos_src):
+                if f.endswith(".textproto"):
+                    src_path = os.path.join(textprotos_src, f)
+                    dst_path = os.path.join(seed_corpus_dir, f)
+                    shutil.copy2(src_path, dst_path)
+            Util.info(f"Copied textproto files to {seed_corpus_dir}")
+        else:
+            Util.warning(f"Textprotos directory not found: {textprotos_src}")
+
+        # Step 2: Update BUILD.gn with new filenames
+        Util.info("Step 2: Updating services/webnn/BUILD.gn with seed_corpus_sources")
+        if os.path.exists(seed_corpus_dir):
+            files = [f for f in os.listdir(seed_corpus_dir) if f.endswith(".textproto")]
+            files.sort()
+            sources = ",\n      ".join([f'"webnn_graph_mojolpm_fuzzer_seed_corpus/{f}"' for f in files])
+
+            build_gn_path = "services/webnn/BUILD.gn"
+            if os.path.exists(build_gn_path):
+                with open(build_gn_path, "r") as f:
+                    content = f.read()
+
+                new_content = re.sub(
+                    r"seed_corpus_sources\s*=\s*\[.*?\]",
+                    f"seed_corpus_sources = [\n      {sources}\n    ]",
+                    content,
+                    flags=re.DOTALL,
+                )
+
+                with open(build_gn_path, "w") as f:
+                    f.write(new_content)
+                Util.info(f"Updated {build_gn_path} with {len(files)} textproto files")
+            else:
+                Util.warning(f"BUILD.gn not found: {build_gn_path}")
+        else:
+            Util.warning(f"Seed corpus directory not found: {seed_corpus_dir}")
+
     def build(self, target):
+        if target == "webnn_fuzzer":
+            self._build_webnn_fuzzer()
+            return
+
         build_targets = []
         if target in self.BUILD_TARGET_DICT.keys():
             build_targets.append(self.BUILD_TARGET_DICT[target])
@@ -207,6 +261,52 @@ class Project(Program):
         cmd = f'autoninja {" ".join(build_targets)} -C {self.out_dir}'
         Util.info(cmd)
         os.system(cmd)
+
+    def _build_webnn_fuzzer(self):
+        fuzzer_out_dir = "out/webnn_fuzzer"
+
+        # Step 1: Build webnn_graph_mojolpm_fuzzer_seed_corpus.zip
+        Util.info("Step 1: Building webnn_graph_mojolpm_fuzzer_seed_corpus")
+        cmd = f"autoninja -C {self.out_dir} webnn_graph_mojolpm_fuzzer_seed_corpus"
+        Util.info(cmd)
+        os.system(cmd)
+
+        # Step 2: Unzip webnn_graph_mojolpm_fuzzer_seed_corpus.zip into compiled_binaries
+        compiled_binaries_dir = f"{fuzzer_out_dir}/compiled_binaries"
+        seed_corpus_zip = f"{self.out_dir}/webnn_graph_mojolpm_fuzzer_seed_corpus.zip"
+        Util.info(f"Step 2: Extracting {seed_corpus_zip} to {compiled_binaries_dir}")
+        if os.path.exists(seed_corpus_zip):
+            Util.ensure_dir(compiled_binaries_dir)
+            with zf.ZipFile(seed_corpus_zip, 'r') as zipf:
+                zipf.extractall(compiled_binaries_dir)
+            Util.info(f"Extracted seed corpus to {compiled_binaries_dir}")
+        else:
+            Util.warning(f"Seed corpus zip not found: {seed_corpus_zip}")
+
+        # Step 3: Build fuzzer
+        Util.info("Step 3: Building webnn_graph_mojolpm_fuzzer")
+        cmd = f"autoninja -C {self.out_dir} webnn_graph_mojolpm_fuzzer"
+        Util.info(cmd)
+        os.system(cmd)
+
+        # Step 4: libFuzzer merge
+        minimized_binaries_dir = f"{fuzzer_out_dir}/minimized_binaries"
+        Util.ensure_dir(minimized_binaries_dir)
+        Util.info("Step 4: Running libFuzzer merge")
+        fuzzer_exe = f"{self.out_dir}/webnn_graph_mojolpm_fuzzer"
+        if Util.HOST_OS == Util.WINDOWS:
+            fuzzer_exe = fuzzer_exe.replace("/", "\\") + ".exe"
+            minimized_binaries_dir = minimized_binaries_dir.replace("/", "\\")
+            compiled_binaries_dir = compiled_binaries_dir.replace("/", "\\")
+            # On Windows, set ASAN options via environment
+            asan_options = "detect_odr_violation=0,handle_abort=1,handle_sigtrap=1,handle_sigill=1"
+            cmd = f'set ASAN_OPTIONS={asan_options} && {fuzzer_exe} -merge=1 -rss_limit_mb=0 {minimized_binaries_dir} {compiled_binaries_dir}'
+        else:
+            cmd = f'ASAN_OPTIONS=detect_odr_violation=0,handle_abort=1,handle_sigtrap=1,handle_sigill=1 {fuzzer_exe} -merge=1 -rss_limit_mb=0 {minimized_binaries_dir} {compiled_binaries_dir}'
+        Util.info(cmd)
+        os.system(cmd)
+
+        Util.info("webnn_graph_mojolpm_fuzzer build complete!")
 
     def backup(self, targets, backup_inplace=False, backup_symbol=False):
         if ('webgl' in targets or 'webgpu' in targets) and 'chrome' not in targets:

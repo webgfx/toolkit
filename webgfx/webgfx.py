@@ -149,7 +149,7 @@ examples:
 {0} {1} --target webgl --run --run-combo 2
 {0} {1} --target dawn_perf_tests --root-dir d:/r/dawn --makefile --build
 {0} {1} --target gl_unittests --root-dir d:/r/cr --makefile --build --backup
-{0} {1} --target webnn_graph_mojolpm_fuzzer --makefile --build --backup
+{0} {1} --target webnn_fuzzer --makefile --build
 """.format(
             Util.PYTHON, parser.prog
         )
@@ -225,7 +225,7 @@ examples:
                 'webcodecs',
                 'pixel',
                 'trace',
-                'webnn_graph_mojolpm_fuzzer',
+                'webnn_fuzzer',
             ]:
                 repo_dir = f'{root_dir}/cr'
             elif target in ['angle', 'dawn']:
@@ -233,7 +233,7 @@ examples:
             else:
                 repo_dir = root_dir
 
-            if target == "webnn_graph_mojolpm_fuzzer":
+            if target == "webnn_fuzzer":
                 fuzzer = True
             else:
                 fuzzer = False
@@ -243,7 +243,7 @@ examples:
             if args.sync or args.batch:
                 project.sync()
             if args.makefile or args.batch:
-                project.makefile(is_component_build=args.is_component_build, local=args.makefile_local)
+                project.makefile(target, is_component_build=args.is_component_build, local=args.makefile_local)
             if args.build or args.batch:
                 project.build(target)
             if args.backup or args.batch:
