@@ -82,7 +82,6 @@ class Project(Program):
 
     def makefile(
         self,
-        target,
         dcheck=True,
         is_component_build=False,
         treat_warning_as_error=True,
@@ -199,7 +198,19 @@ class Project(Program):
 
     def build(self, target):
         if target == "webnn_fuzzer":
-            self._build_webnn_fuzzer()
+            # Step 1: Build seed corpus (not necessary, just zip them)
+            Util.info("Building webnn_graph_mojolpm_textproto_fuzzer_seed_corpus")
+            cmd = f"autoninja -C {self.out_dir} webnn_graph_mojolpm_textproto_fuzzer_seed_corpus"
+            os.system(cmd)
+            Util.info("webnn_graph_mojolpm_textproto_fuzzer_seed_corpus build complete!")
+
+            # Step 2: Build fuzzer
+            Util.info("Step 2: Building webnn_graph_mojolpm_textproto_fuzzer")
+            Util.info("Building webnn_graph_mojolpm_textproto_fuzzer")
+            cmd = f"autoninja -C {self.out_dir} webnn_graph_mojolpm_textproto_fuzzer"
+            Util.info(cmd)
+            os.system(cmd)
+
             return
 
         build_targets = []
@@ -212,13 +223,6 @@ class Project(Program):
         cmd = f'autoninja {" ".join(build_targets)} -C {self.out_dir}'
         Util.info(cmd)
         os.system(cmd)
-
-    def _build_webnn_fuzzer(self):
-        Util.info("Building webnn_graph_mojolpm_fuzzer")
-        cmd = f"autoninja -C {self.out_dir} webnn_graph_mojolpm_fuzzer"
-        Util.info(cmd)
-        os.system(cmd)
-        Util.info("webnn_graph_mojolpm_fuzzer build complete!")
 
     def backup(self, targets, backup_inplace=False, backup_symbol=False):
         if ('webgl' in targets or 'webgpu' in targets) and 'chrome' not in targets:
