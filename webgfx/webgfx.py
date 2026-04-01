@@ -59,6 +59,7 @@ class Webgfx(Program):
             action="store_true",
         )
         parser.add_argument("--backup", dest="backup", help="backup", action="store_true")
+        parser.add_argument("--backup-symbol", dest="backup_symbol", help="backup symbol", action="store_true")
         parser.add_argument(
             "--backup-inplace",
             dest="backup_inplace",
@@ -249,7 +250,7 @@ examples:
             if args.backup or args.batch:
                 if target in ['webgl', 'webgpu'] and has_chromium_backup:
                     continue
-                project.backup([target])
+                project.backup([target], backup_symbol=args.backup_symbol)
                 if target in ['webgl', 'webgpu']:
                     has_chromium_backup = True
             if args.download:
