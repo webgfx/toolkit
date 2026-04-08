@@ -28,6 +28,7 @@ class Project(Program):
         "webgl": "//chrome/test:telemetry_gpu_integration_test",
         "webgpu": "//chrome/test:telemetry_gpu_integration_test",
         "gl_unittests": "//ui/gl:gl_unittests",
+        "webnn_fuzzer": "//services/webnn:webnn_graph_mojolpm_textproto_fuzzer",
     }
     SEPARATOR = ": "
 
@@ -198,14 +199,6 @@ class Project(Program):
 
     def build(self, target):
         if target == "webnn_fuzzer":
-            # Step 1: Build seed corpus (not necessary, just zip them)
-            Util.info("Building webnn_graph_mojolpm_textproto_fuzzer_seed_corpus")
-            cmd = f"autoninja -C {self.out_dir} webnn_graph_mojolpm_textproto_fuzzer_seed_corpus"
-            os.system(cmd)
-            Util.info("webnn_graph_mojolpm_textproto_fuzzer_seed_corpus build complete!")
-
-            # Step 2: Build fuzzer
-            Util.info("Step 2: Building webnn_graph_mojolpm_textproto_fuzzer")
             Util.info("Building webnn_graph_mojolpm_textproto_fuzzer")
             cmd = f"autoninja -C {self.out_dir} webnn_graph_mojolpm_textproto_fuzzer"
             Util.info(cmd)
@@ -325,6 +318,44 @@ class Project(Program):
                 [
                     "gen/third_party/dawn/third_party/webgpu-cts",
                     "gen/third_party/dawn/webgpu-cts",
+                ]
+            )
+        if 'webnn_fuzzer' in targets:
+            exclude_files.extend(
+                [
+                    "../../build",
+                    "../../net",
+                    "../../third_party",
+                    "../../tools",
+                    "../../.vpython3",
+                    "gen/third_party/",
+                    "angledata",
+                    "pyproto",
+                    "content_shell.pak",
+                    "content_shell.pak.info",
+                    "d3dcompiler_47.dll",
+                    "dbgcore.dll",
+                    "dbghelp.dll",
+                    "dxcompiler.dll",
+                    "dxil.dll",
+                    "icudtl.dat",
+                    "libEGL.dll",
+                    "libGLESv2.dll",
+                    "msvcp140.dll",
+                    "msvcp140_atomic_wait.dll",
+                    "snapshot_blob.bin",
+                    "test_trace_processor.dll",
+                    "v8_context_snapshot.bin",
+                    "vccorlib140.dll",
+                    "vcruntime140.dll",
+                    "vcruntime140_1.dll",
+                    "vk_swiftshader.dll",
+                    "vk_swiftshader_icd.json",
+                    "VkICD_mock_icd.dll",
+                    "VkLayer_khronos_validation.dll",
+                    "vulkan-1.dll",
+                    "webnn_graph_mojolpm_textproto_fuzzer.owners",
+                    "webnn_graph_mojolpm_textproto_fuzzer_seed_corpus.zip",
                 ]
             )
 
