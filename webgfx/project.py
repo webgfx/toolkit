@@ -581,7 +581,7 @@ class Project(Program):
                         cmd += f" webgpu_compat_cts"
                     else:
                         cmd += f" webgpu_cts"
-                    cmd += f" --retry-limit 1"
+                    cmd += f" --retry-limit 0"
                 elif target in ["context_lost", "webcodecs", "pixel"]:
                     cmd += f" {target}"
                 elif target in ["trace"]:
@@ -589,7 +589,9 @@ class Project(Program):
                 cmd += f" {run_args}"
                 result_file = ""
 
-                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu"
+                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu --disable-gpu-process-crash-limit"
+                if warp in ['old', 'new']:
+                    extra_browser_args += " --ignore-gpu-blocklist"
                 # if target == "webgl":
                 #    extra_browser_args += " --use-cmd-decoder=passthrough --use-gl=angle --use-angle=d3d11"
                 if target == "webgpu" and combo == "d3d11":
