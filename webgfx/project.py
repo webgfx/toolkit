@@ -47,7 +47,7 @@ class Project(Program):
         if project == "chromium":
             self.repo = ChromiumRepo(root_dir)
 
-        self.project_backup_dir = f"{Util.BACKUP_DIR}/{self.project}"
+        self.project_backup_dir = f"{Util.BACKUP_DIR}/{self.target_cpu}/{self.project}"
         self.server_backup_dir = f"\\\\{Util.BACKUP_SERVER}\\backup\\{self.target_cpu}\\{Util.HOST_OS}\\{self.project}"
 
         if is_debug:
@@ -193,6 +193,9 @@ class Project(Program):
             # Below gn args couldn't be set
             # gn_args += ' dawn_supports_glfw_for_windowing=false dawn_use_glfw=false dawn_use_windows_ui=false tint_build_cmd_tools=false tint_build_tests=false'
 
+        if self.project == "angle":
+            gn_args += " dawn_use_built_dxc=false"
+
         cmd = f'gn gen {self.out_dir} --args="{gn_args}"'
         Util.info(cmd)
         os.system(cmd)
@@ -259,6 +262,8 @@ class Project(Program):
             )
             if target_files[0].startswith("WARNING"):
                 target_files = target_files[1:]
+            # Strip quotes and whitespace from gn desc output
+            target_files = [f.strip().strip('"') for f in target_files if f.strip()]
             tmp_files = Util.union_list(tmp_files, target_files)
 
         exclude_files = []
