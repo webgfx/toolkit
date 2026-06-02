@@ -120,7 +120,7 @@ class Webgfx(Program):
         parser.add_argument("--run-dry", dest="run_dry", help="dry run", action="store_true")
         parser.add_argument("--repeat", dest="repeat", help="repeat tests n times", type=int, default=1)
         parser.add_argument(
-            "--warp", dest="warp", help="use WARP DLL (old or new)", choices=['old', 'new'], default=None
+            "--warp", dest="warp", help="use WARP DLL version (e.g. '1.0.18', '1.0.19', '1.0.20') or 'system' for system WARP", default=None
         )
 
         parser.add_argument("--report", dest="report", help="report")

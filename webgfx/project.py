@@ -484,8 +484,9 @@ class Project(Program):
         if rev not in ["out", "backup"]:
             Util.impossible()
 
-        # Copy WARP DLL if specified, or remove it if not
-        if warp in ['old', 'new']:
+        # Copy WARP DLL if specified, or remove it if not.
+        # 'system' uses the OS-installed WARP (still removes any bundled DLL).
+        if warp and warp != 'system':
             self._copy_warp_dll(warp)
         else:
             self._remove_warp_dll()
@@ -594,9 +595,9 @@ class Project(Program):
                 cmd += f" {run_args}"
                 result_file = ""
 
-                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu --disable-gpu-process-crash-limit"
-                if warp in ['old', 'new']:
-                    extra_browser_args += " --ignore-gpu-blocklist"
+                extra_browser_args = "--disable-backgrounding-occluded-windows --force_high_performance_gpu --disable-gpu-process-crash-limit --disable-field-trial-config"
+                if target == "webgpu" and warp:
+                    extra_browser_args += " --enable-features=WebGPUWARP"
                 # if target == "webgl":
                 #    extra_browser_args += " --use-cmd-decoder=passthrough --use-gl=angle --use-angle=d3d11"
                 if target == "webgpu" and combo == "d3d11":
