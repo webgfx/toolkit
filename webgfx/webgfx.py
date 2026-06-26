@@ -250,7 +250,7 @@ examples:
             if args.backup or args.batch:
                 if target in ['webgl', 'webgpu'] and has_chromium_backup:
                     continue
-                project.backup([target], backup_symbol=args.backup_symbol)
+                project.backup([target], backup_inplace=args.backup_inplace, backup_symbol=args.backup_symbol)
                 if target in ['webgl', 'webgpu']:
                     has_chromium_backup = True
             if args.download:

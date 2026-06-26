@@ -467,6 +467,9 @@ class Project(Program):
             except (OSError, IOError, PermissionError, FileNotFoundError, shutil.Error) as e:
                 Util.warning(f"Failed to copy [{src_file}] to [{dst_file}]: {e}")
 
+        if Util.HOST_OS == Util.WINDOWS and self.project == 'chromium' and 'chrome' in targets:
+            self._apply_chromium_backup_sandbox_permissions(backup_path)
+
         # Postprocess the backup
         if self.project == 'dawn':
             shutil.copytree(
@@ -978,3 +981,26 @@ class Project(Program):
 
         except (OSError, subprocess.SubprocessError, FileNotFoundError) as e:
             Util.error(f"Sandbox permission fix failed for {filename}: {e}")
+
+    def _apply_chromium_backup_sandbox_permissions(self, backup_path):
+        """
+        Grant the Windows Chromium sandbox read/execute access to the backup tree.
+
+        The renderer runs with ALL RESTRICTED APPLICATION PACKAGES in its token. If a copied
+        build tree lacks this ACE, chrome/msedge can start but sandboxed renderers fail to load
+        DLLs/resources from the backup package.
+        """
+        import subprocess
+
+        normalized_backup_path = os.path.normpath(backup_path)
+        rule = '*S-1-15-2-2:(OI)(CI)(RX)'
+        cmd = ['icacls', normalized_backup_path, '/grant', rule, '/t', '/c', '/q']
+
+        Util.info(f"Applying Chromium sandbox backup permissions: {normalized_backup_path}")
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            if result.returncode != 0:
+                detail = (result.stderr or result.stdout).strip()
+                Util.warning(f"Failed to apply Chromium sandbox backup permissions: {detail}")
+        except (OSError, subprocess.SubprocessError, FileNotFoundError) as e:
+            Util.warning(f"Failed to apply Chromium sandbox backup permissions: {e}")
