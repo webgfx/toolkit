@@ -66,6 +66,14 @@ class Project(Program):
         self.result_dir = result_dir
         self.run_log = f"{self.result_dir}/run.log"
 
+        # Ensure depot_tools (autogn/autoninja) are on PATH.
+        for tools_dir in (
+            os.path.join(root_dir, "depot_tools"),
+            os.path.join(root_dir, "depot_tools", "scripts"),
+        ):
+            if os.path.isdir(tools_dir) and tools_dir not in os.environ.get("PATH", ""):
+                os.environ["PATH"] = tools_dir + os.pathsep + os.environ.get("PATH", "")
+
         if project == "chromium":
             self.repo_dir = f"{root_dir}/src"
         else:
@@ -73,6 +81,28 @@ class Project(Program):
 
         if os.path.exists(self.repo_dir):
             Util.chdir(self.repo_dir)
+
+    def _patch_autogn(self):
+        # autogn.py ships from depot_tools and can be reset on sync; ensure the
+        # win/arm64 release config mapping (win_arm64_release) exists.
+        autogn_path = os.path.join(self.root_dir, "depot_tools", "scripts", "autogn.py")
+        if not os.path.isfile(autogn_path):
+            return
+        with open(autogn_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        if '"win_arm64_release"' in content:
+            return
+        needle = '            "arm64": {\n                "debug": "win_arm64_debug",\n            },'
+        replacement = (
+            '            "arm64": {\n'
+            '                "debug": "win_arm64_debug",\n'
+            '                "release": "win_arm64_release",\n'
+            '            },'
+        )
+        if needle in content:
+            with open(autogn_path, "w", encoding="utf-8") as f:
+                f.write(content.replace(needle, replacement, 1))
+            Util.info(f"Patched {autogn_path}: added win_arm64_release mapping")
 
     def sync(self, verbose=False):
         self._execute("git pull --no-recurse-submodules", exit_on_error=self.exit_on_error)
@@ -113,7 +143,9 @@ class Project(Program):
                 symbol_level = 2
 
         if self.project == 'chromium':
-            cmd = f'autogn {self.target_cpu} {self.build_type} -a {self.root_dir}'
+            self._patch_autogn()
+            out_subdir = self.out_dir.split("/", 1)[1] if "/" in self.out_dir else self.out_dir
+            cmd = f'autogn {self.target_cpu} {self.build_type} -a {self.root_dir} -o {out_subdir}'
             if is_component_build:
                 cmd += " --is-component-build=true"
             if not local:
