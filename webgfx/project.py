@@ -36,15 +36,17 @@ class Project(Program):
         super().__init__()
         project = os.path.basename(root_dir)
         # handle project chromium
-        if "chromium" in project or "chrome" in project or "cr" in project or "edge" in project:
+        if "chromium" in project or "chrome" in project or "cr" in project:
             project = "chromium"
+        elif "edge" in project:
+            project = "edge"
 
         self.fuzzer = fuzzer
         if fuzzer:
             project = "chromium"
         self.project = project
 
-        if project == "chromium":
+        if project in ["chromium", "edge"]:
             self.repo = ChromiumRepo(root_dir)
 
         self.project_backup_dir = f"{Util.BACKUP_DIR}/{self.target_cpu}/{self.project}"
@@ -58,6 +60,8 @@ class Project(Program):
 
         self.is_debug = is_debug
         self.out_dir = f"out/{self.build_type}_{self.target_cpu}"
+        if project == "edge":
+            self.out_dir = "out/win_x64_release_developer_build"
         if self.fuzzer:
             self.out_dir += "_fuzzer"
 
@@ -74,7 +78,7 @@ class Project(Program):
             if os.path.isdir(tools_dir) and tools_dir not in os.environ.get("PATH", ""):
                 os.environ["PATH"] = tools_dir + os.pathsep + os.environ.get("PATH", "")
 
-        if project == "chromium":
+        if project in ["chromium", "edge"]:
             self.repo_dir = f"{root_dir}/src"
         else:
             self.repo_dir = root_dir
@@ -142,7 +146,7 @@ class Project(Program):
             else:
                 symbol_level = 2
 
-        if self.project == 'chromium':
+        if self.project in ["chromium", "edge"]:
             self._patch_autogn()
             out_subdir = self.out_dir.split("/", 1)[1] if "/" in self.out_dir else self.out_dir
             cmd = f'autogn {self.target_cpu} {self.build_type} -a {self.root_dir} -o {out_subdir}'
@@ -187,7 +191,7 @@ class Project(Program):
 
         gn_args += f" symbol_level={symbol_level}"
 
-        if self.project == "chromium":
+        if self.project in ["chromium", "edge"]:
             if symbol_level == 0:
                 gn_args += " blink_symbol_level=0 v8_symbol_level=0"
 
@@ -256,7 +260,7 @@ class Project(Program):
         if ('webgl' in targets or 'webgpu' in targets) and 'chrome' not in targets:
             targets.append('chrome')
 
-        if self.project == "chromium":
+        if self.project in ["chromium", "edge"]:
             rev = self.repo.get_working_dir_rev()
             rev_dir = Util.cal_backup_dir(rev)
         else:
@@ -278,7 +282,7 @@ class Project(Program):
             if target.startswith("angle"):
                 backup_target = f"//src/tests:{backup_target}"
             elif target.startswith("dawn"):
-                if self.project == "chromium":
+                if self.project in ["chromium", "edge"]:
                     backup_target = f"//third_party/dawn/src/dawn/tests:{backup_target}"
                 else:
                     backup_target = f"//src/dawn/tests:{backup_target}"
@@ -499,7 +503,7 @@ class Project(Program):
             except (OSError, IOError, PermissionError, FileNotFoundError, shutil.Error) as e:
                 Util.warning(f"Failed to copy [{src_file}] to [{dst_file}]: {e}")
 
-        if Util.HOST_OS == Util.WINDOWS and self.project == 'chromium' and 'chrome' in targets:
+        if Util.HOST_OS == Util.WINDOWS and self.project in ["chromium", "edge"] and 'chrome' in targets:
             self._apply_chromium_backup_sandbox_permissions(backup_path)
 
         # Postprocess the backup
@@ -692,7 +696,7 @@ class Project(Program):
                     Util.ensure_file(result_file)
 
             if rev == "out":
-                if self.project == "chromium":
+                if self.project in ["chromium", "edge"]:
                     repo_rev = self.repo.get_working_dir_rev()
                 else:
                     repo_rev = 0
