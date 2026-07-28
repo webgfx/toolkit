@@ -2,31 +2,11 @@
 
 import argparse
 import os
-import re
-import subprocess
 import sys
 
 HOST_OS = sys.platform
-if HOST_OS == "win32":
-    lines = subprocess.Popen(
-        "dir %s" % __file__.replace("/", "\\"), shell=True, stdout=subprocess.PIPE
-    ).stdout.readlines()
-    for tmp_line in lines:
-        match = re.search(r"\[(.*)\]", tmp_line.decode("utf-8"))
-        if match:
-            SCRIPT_DIR = os.path.dirname(match.group(1)).replace("\\", "/")
-            break
-    else:
-        SCRIPT_DIR = sys.path[0]
-else:
-    lines = subprocess.Popen("ls -l %s" % __file__, shell=True, stdout=subprocess.PIPE).stdout.readlines()
-    for tmp_line in lines:
-        match = re.search(r".* -> (.*)", tmp_line.decode("utf-8"))
-        if match:
-            SCRIPT_DIR = os.path.dirname(match.group(1))
-            break
-    else:
-        SCRIPT_DIR = sys.path[0]
+# Resolve symlinks so the script works when invoked through a link.
+SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__)).replace("\\", "/")
 
 sys.path.append(SCRIPT_DIR)
 sys.path.append(SCRIPT_DIR + "/..")
