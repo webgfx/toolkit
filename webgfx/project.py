@@ -1,8 +1,86 @@
 ﻿import os
 import re
 import shutil
+import subprocess
 
 from util.base import Util, Program, ChromiumRepo, Timer
+
+
+def _enlistment_roots(root_dir):
+    roots = []
+    for path in (os.path.abspath(root_dir), os.path.realpath(root_dir)):
+        if os.path.basename(path).lower() == "src":
+            path = os.path.dirname(path)
+        normalized_path = os.path.normpath(path)
+        if normalized_path not in roots:
+            roots.append(normalized_path)
+    return roots
+
+
+def detect_project(root_dir):
+    roots = _enlistment_roots(root_dir)
+    for root in roots:
+        gclient_path = os.path.join(root, ".gclient")
+        if not os.path.isfile(gclient_path):
+            continue
+        with open(gclient_path, encoding="utf-8", errors="replace") as input_file:
+            gclient = input_file.read().lower()
+        if "microsoft.visualstudio.com" in gclient and "/edge/_git/" in gclient:
+            return "edge"
+        if "chromium.googlesource.com/chromium/src" in gclient:
+            return "chromium"
+
+    for root in roots:
+        source_dir = os.path.join(root, "src")
+        if not os.path.isdir(source_dir):
+            continue
+        result = subprocess.run(
+            ["git", "-C", source_dir, "remote", "get-url", "origin"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            continue
+        remote_url = result.stdout.strip().lower()
+        if "microsoft.visualstudio.com" in remote_url and "/edge/_git/" in remote_url:
+            return "edge"
+        if "chromium.googlesource.com/chromium/src" in remote_url:
+            return "chromium"
+
+    project_name = os.path.basename(roots[0]).lower()
+    if "edge" in project_name:
+        return "edge"
+    if project_name in {"cr", "chrome", "chromium"} or "chromium" in project_name:
+        return "chromium"
+    return project_name
+
+
+def configure_depot_tools_path(root_dir, project):
+    depot_tools_names = {
+        "chromium": "depot_tools_cr",
+        "edge": "depot_tools_edge",
+    }
+    candidates = []
+    if project in depot_tools_names:
+        for root in _enlistment_roots(root_dir):
+            candidates.append(os.path.join(os.path.dirname(root), depot_tools_names[project]))
+    for root in _enlistment_roots(root_dir):
+        candidates.append(os.path.join(root, "depot_tools"))
+
+    depot_tools_dir = next((path for path in candidates if os.path.isdir(path)), None)
+    if not depot_tools_dir:
+        return None
+
+    desired_paths = [depot_tools_dir, os.path.join(depot_tools_dir, "scripts")]
+    desired_paths = [path for path in desired_paths if os.path.isdir(path)]
+    desired_keys = {os.path.normcase(os.path.normpath(path)) for path in desired_paths}
+    existing_paths = [path for path in os.environ.get("PATH", "").split(os.pathsep) if path]
+    existing_paths = [
+        path for path in existing_paths if os.path.normcase(os.path.normpath(path)) not in desired_keys
+    ]
+    os.environ["PATH"] = os.pathsep.join(desired_paths + existing_paths)
+    return depot_tools_dir
 
 
 class Project(Program):
@@ -34,12 +112,7 @@ class Project(Program):
 
     def __init__(self, root_dir, result_dir, is_debug=False, fuzzer=False):
         super().__init__()
-        project = os.path.basename(root_dir)
-        # handle project chromium
-        if "chromium" in project or "chrome" in project or "cr" in project:
-            project = "chromium"
-        elif "edge" in project:
-            project = "edge"
+        project = detect_project(root_dir)
 
         self.fuzzer = fuzzer
         if fuzzer:
@@ -70,13 +143,7 @@ class Project(Program):
         self.result_dir = result_dir
         self.run_log = f"{self.result_dir}/run.log"
 
-        # Ensure depot_tools (autogn/autoninja) are on PATH.
-        for tools_dir in (
-            os.path.join(root_dir, "depot_tools"),
-            os.path.join(root_dir, "depot_tools", "scripts"),
-        ):
-            if os.path.isdir(tools_dir) and tools_dir not in os.environ.get("PATH", ""):
-                os.environ["PATH"] = tools_dir + os.pathsep + os.environ.get("PATH", "")
+        self.depot_tools_dir = configure_depot_tools_path(root_dir, project)
 
         if project in ["chromium", "edge"]:
             self.repo_dir = f"{root_dir}/src"
@@ -89,7 +156,9 @@ class Project(Program):
     def _patch_autogn(self):
         # autogn.py ships from depot_tools and can be reset on sync; ensure the
         # win/arm64 release config mapping (win_arm64_release) exists.
-        autogn_path = os.path.join(self.root_dir, "depot_tools", "scripts", "autogn.py")
+        if not self.depot_tools_dir:
+            return
+        autogn_path = os.path.join(self.depot_tools_dir, "scripts", "autogn.py")
         if not os.path.isfile(autogn_path):
             return
         with open(autogn_path, "r", encoding="utf-8") as f:

@@ -13,7 +13,8 @@ sys.path.append(SCRIPT_DIR + "/..")
 
 from util.base import Util, Program
 from misc.testhelper import TestResult
-from project import Project
+from edge_sync import EdgeSyncError, EdgeSyncFix
+from project import configure_depot_tools_path, detect_project, Project
 
 
 class Webgfx(Program):
@@ -28,6 +29,17 @@ class Webgfx(Program):
 
         parser.add_argument("--target", dest="target", help="target", default="all")
         parser.add_argument("--sync", dest="sync", help="sync", action="store_true")
+        parser.add_argument(
+            "--edge-sync-fix",
+            dest="edge_sync_fix",
+            choices=["apply", "revert"],
+            help="apply or revert the Edge-only Git sync performance fix",
+        )
+        parser.add_argument(
+            "--edge-sync-fix-backup",
+            dest="edge_sync_fix_backup",
+            help="backup directory to use with --edge-sync-fix revert; defaults to latest",
+        )
         parser.add_argument("--makefile", dest="makefile", help="makefile", action="store_true")
         parser.add_argument("--makefile-local", dest="makefile_local", help="makefile without rbe", action="store_true")
         parser.add_argument("--build", dest="build", help="build", action="store_true")
@@ -130,6 +142,8 @@ examples:
 {0} {1} --target webgl --run --run-combo 2
 {0} {1} --target dawn_perf_tests --root-dir d:/r/dawn --makefile --build
 {0} {1} --target gl_unittests --root-dir d:/r/cr --makefile --build --backup
+{0} {1} --target chrome --root-dir d:/r/edge --edge-sync-fix apply --sync --makefile --build
+{0} {1} --root-dir d:/r/edge --edge-sync-fix revert
 {0} {1} --target webnn_fuzzer --makefile --build
 """.format(
             Util.PYTHON, parser.prog
@@ -140,6 +154,24 @@ examples:
 
         # strip the ending "\"
         root_dir = self.root_dir.strip("\\")
+        if args.edge_sync_fix_backup and args.edge_sync_fix != "revert":
+            parser.error("--edge-sync-fix-backup requires --edge-sync-fix revert")
+        root_project = detect_project(root_dir)
+        depot_tools_dir = configure_depot_tools_path(root_dir, root_project)
+        if depot_tools_dir:
+            Util.info(f"Using depot_tools: {depot_tools_dir}")
+        else:
+            Util.info("Using depot_tools from the existing PATH")
+        if args.edge_sync_fix:
+            try:
+                edge_sync_fix = EdgeSyncFix(root_dir, output=Util.info)
+                if args.edge_sync_fix == "apply":
+                    edge_sync_fix.apply()
+                else:
+                    edge_sync_fix.revert(args.edge_sync_fix_backup)
+            except EdgeSyncError as error:
+                Util.error(str(error))
+
         self.result_dir = f"{root_dir}/result/{self.timestamp}"
 
         self.run_log = f"{self.result_dir}/run.log"
@@ -196,7 +228,7 @@ examples:
 
         has_chromium_backup = False
         for target in self.targets:
-            if 'cr' in root_dir or 'edge' in root_dir:
+            if root_project in ["chromium", "edge"]:
                 repo_dir = root_dir
             elif target in [
                 'webgl',
