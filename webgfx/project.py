@@ -57,14 +57,13 @@ def detect_project(root_dir):
 
 
 def configure_depot_tools_path(root_dir, project):
-    depot_tools_names = {
-        "chromium": "depot_tools_cr",
-        "edge": "depot_tools_edge",
-    }
+    # Only Edge needs its own depot_tools; chromium, dawn, angle and friends all
+    # sync with the Chromium one.
+    depot_tools_name = "depot_tools_edge" if project == "edge" else "depot_tools_cr"
     candidates = []
-    if project in depot_tools_names:
-        for root in _enlistment_roots(root_dir):
-            candidates.append(os.path.join(os.path.dirname(root), depot_tools_names[project]))
+    for root in _enlistment_roots(root_dir):
+        candidates.append(os.path.join(os.path.dirname(root), depot_tools_name))
+        candidates.append(os.path.join(root, depot_tools_name))
     for root in _enlistment_roots(root_dir):
         candidates.append(os.path.join(root, "depot_tools"))
 
