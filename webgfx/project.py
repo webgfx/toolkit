@@ -6,6 +6,23 @@ import subprocess
 from util.base import Util, Program, ChromiumRepo, Timer
 
 
+def _apply_gn_arg_overrides(args_path, overrides):
+    with open(args_path, "r", encoding="utf-8") as f:
+        gn_args = f.read()
+
+    for name, value in overrides.items():
+        assignment = f"{name} = {value}"
+        pattern = rf"(?m)^{re.escape(name)}\s*=.*$"
+        gn_args, replacement_count = re.subn(pattern, assignment, gn_args)
+        if replacement_count == 0:
+            if gn_args and not gn_args.endswith("\n"):
+                gn_args += "\n"
+            gn_args += f"{assignment}\n"
+
+    with open(args_path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(gn_args)
+
+
 def _enlistment_roots(root_dir):
     roots = []
     for path in (os.path.abspath(root_dir), os.path.realpath(root_dir)):
@@ -218,6 +235,7 @@ class Project(Program):
             self._patch_autogn()
             out_subdir = self.out_dir.split("/", 1)[1] if "/" in self.out_dir else self.out_dir
             cmd = f'autogn {self.target_cpu} {self.build_type} -a {self.root_dir} -o {out_subdir}'
+            ffmpeg_branding = "Edge" if self.project == "edge" else "Chrome"
             if is_component_build:
                 cmd += " --is-component-build=true"
             if not local:
@@ -227,9 +245,22 @@ class Project(Program):
             else:
                 cmd += " --dcheck_always_on=false"
 
-            cmd += f' --proprietary_codecs=true --ffmpeg_branding=\\"Chrome\\" --symbol_level={symbol_level} --enable_nacl=false'
+            cmd += f' --proprietary_codecs=true --ffmpeg_branding=\"{ffmpeg_branding}\" --symbol_level={symbol_level} --enable_nacl=false'
             Util.info(cmd)
-            os.system(cmd)
+            if os.system(cmd) != 0:
+                return
+
+            args_path = os.path.join(self.repo_dir, self.out_dir, "args.gn")
+            _apply_gn_arg_overrides(
+                args_path,
+                {
+                    "proprietary_codecs": "true",
+                    "ffmpeg_branding": f'"{ffmpeg_branding}"',
+                },
+            )
+            self._execute(
+                f"gn gen {self.out_dir}", exit_on_error=self.exit_on_error
+            )
             return
 
         if local:
