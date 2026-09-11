@@ -251,7 +251,13 @@ examples:
             else:
                 fuzzer = False
 
-            project = Project(root_dir=repo_dir, result_dir=self.result_dir, is_debug=self.args.is_debug, fuzzer=fuzzer)
+            project = Project(
+                root_dir=repo_dir,
+                result_dir=self.result_dir,
+                is_debug=self.args.is_debug,
+                fuzzer=fuzzer,
+                target_arch=self.target_arch,
+            )
 
             if args.sync or args.batch:
                 project.sync()
