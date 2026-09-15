@@ -126,8 +126,17 @@ class Project(Program):
     }
     SEPARATOR = ": "
 
-    def __init__(self, root_dir, result_dir, is_debug=False, fuzzer=False):
-        super().__init__()
+    def __init__(
+        self,
+        root_dir,
+        result_dir,
+        is_debug=False,
+        fuzzer=False,
+        target_arch="default",
+    ):
+        if target_arch.lower() == "arm64":
+            target_arch = Util.ARM64
+        super().__init__(target_arch=target_arch)
         project = detect_project(root_dir)
 
         self.fuzzer = fuzzer
